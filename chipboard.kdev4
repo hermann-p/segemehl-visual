@@ -1,0 +1,4 @@
+[Project]
+Name=chipboard
+Manager=KDevCMakeManager
+VersionControl=kdevgit
