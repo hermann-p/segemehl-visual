@@ -24,6 +24,7 @@ public:
   std::string getChrName ( const chr_num_t num ) const;
   ReadContainer* getReadAt ( const chr_num_t chr, const chr_pos_t pos ) const;
   ReadContainer* getReadAt ( const std::string chr, const chr_pos_t pos ) const; 
+  unsigned short getLength ( const chr_num_t n ) const;
 
   void createChromosome ( const std::string name, const uint32_t length = 0 );
   ReadContainer* createRead ( const chr_num_t chr, const chr_pos_t pos, const short len );

@@ -25,6 +25,11 @@ std::string Genome::getChrName ( const chr_num_t num ) const {
   return chrNames[num];
 }
 
+short unsigned int Genome::getLength ( const chr_num_t n ) const {
+  assume(n < chrLens.size(), "Can not find length of nonexistant chromosome");
+  return chrLens.at(n);
+}
+
 
 void Genome::createChromosome ( const std::string name, const uint32_t length ) {
   chr_num_t N = chrNames.size();
@@ -213,7 +218,7 @@ void Genome::printout( ReadContainer* element ) {
     }
   }
   else {
-//    std::cout << "    " << element->fivePrimeRead.size() << " elements upstream\n";
+    //    std::cout << "    " << element->fivePrimeRead.size() << " elements upstream\n";
     element->runID = runID; // mark as processed
 
     for (auto& iter : element->fivePrimeRead) {
@@ -224,7 +229,7 @@ void Genome::printout( ReadContainer* element ) {
     std::string line;
     getline(str, line);
     log(line);
-//    std::cout << "    " << element->threePrimeRead.size() << " elements downstream\n";
+    //    std::cout << "    " << element->threePrimeRead.size() << " elements downstream\n";
     for (auto& iter : element->threePrimeRead) {
       if (iter->runID != runID) printout(iter);
     }

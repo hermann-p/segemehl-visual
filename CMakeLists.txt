@@ -14,9 +14,12 @@ include_directories(${QT_INCLUDES} ${CMAKE_CURRENT_BINARY_DIR})
 set(chipboard_SRCS chipboard.cpp main.cpp)
 set(CMAKE_CXX_FLAGS "-std=c++11 -Wall")
 
-#qt4_automoc(${chipboard_SRCS})
-#add_executable(chipboard ${chipboard_SRCS})
-add_executable(testrun tests.cpp genome.cpp readcontainer.cpp utils.cpp)
-#target_link_libraries(chipboard ${QT_QTCORE_LIBRARY} ${QT_QTGUI_LIBRARY})
+qt4_automoc(${chipboard_SRCS})
+add_executable(chipboard ${chipboard_SRCS})
+target_link_libraries(chipboard ${QT_QTCORE_LIBRARY} ${QT_QTGUI_LIBRARY})
+
+add_executable(testrun tests.cpp genome.cpp readcontainer.cpp utils.cpp plot.cpp)
+target_link_libraries(testrun ${QT_QTCORE_LIBRARY} ${QT_QTGUI_LIBRARY})
+
 
 #install(TARGETS chipboard RUNTIME DESTINATION bin)

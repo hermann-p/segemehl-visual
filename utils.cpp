@@ -6,12 +6,12 @@
 #include <string>
 
 
-void log ( const std::__1::string msg ) {
+void log ( const std::string msg ) {
   std::cout << msg << std::endl;
 }
 
 
-void assume ( const bool isGood, const std::__1::string msg, bool fatal ) {
+void assume ( const bool isGood, const std::string msg, bool fatal ) {
   if (!isGood) {
     if (fatal) {
       std::cerr << "Error: " << msg << ", halting.";
@@ -24,7 +24,7 @@ void assume ( const bool isGood, const std::__1::string msg, bool fatal ) {
 }
 
 
-std::vector< std::string > strsplit ( const std::__1::string input, const std::__1::string& delim, bool keepEmpty ) {
+std::vector< std::string > strsplit ( const std::string input, const std::string& delim, bool keepEmpty ) {
   std::string token, theStr = input;
   int L = delim.length();
   std::vector< std::string > result;
