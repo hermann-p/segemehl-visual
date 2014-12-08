@@ -13,6 +13,12 @@ bool operator == ( const ReadContainer& a, const ReadContainer& b ) {
           a.threePrimeEnd == b.threePrimeEnd);
 }
 
+
+short int ReadContainer::length() const {
+  return threePrimeEnd - fivePrimeEnd;
+}
+
+
 void ReadContainer::addDownstreamRead ( const Genome& genome, const chr_num_t chr, const chr_pos_t pos ) {
   ReadContainer* dnstr = genome.getReadAt(chr, pos);
   if (dnstr != nullptr) {

@@ -19,7 +19,7 @@ public:
   chr_pos_t fivePrimeEnd;
   chr_pos_t threePrimeEnd;
   unsigned char flags;
-  short length;
+  short length() const;
   uint runID;
 
   

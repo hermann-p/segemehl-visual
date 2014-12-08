@@ -101,7 +101,7 @@ bool Genome::parseHeaderLine ( const std::string& line ) {
       case 'S': { // Token @SQ: Reference dictionary entry
 	  auto tokens = strsplit(line, "\t", false);
 	  std::string name = strsplit(tokens[1], ":")[1];
-	  unsigned short len = atoi( strsplit(tokens[2], ":")[2].c_str() );
+	  unsigned short len = atoi( strsplit(tokens[2], ":")[1].c_str() );
 	  createChromosome(name, len);
 	}
 	break;
@@ -181,7 +181,7 @@ bool Genome::parseDataLine ( const std::string& line ) {
       registerRead(rc);
     }
     
-    std::cout << (int)chr << "@" << pos5 << "-" << pos3 << "; next: " << (int)nextChr << "@" << nextPos << "; prev: " << (int)prevChr << "@" << prevPos << std::endl;
+//    std::cout << (int)chr << "@" << pos5 << "-" << pos3 << "; next: " << (int)nextChr << "@" << nextPos << "; prev: " << (int)prevChr << "@" << prevPos << std::endl;
       
     if (hasNext) {
       rc->addDownstreamRead(*this, nextChr, nextPos);
@@ -211,7 +211,7 @@ void Genome::printout( ReadContainer* element ) {
     for (auto& chr: readPos) {
       std::cout << "Chromosome " << getChrName(i++) << " has " << chr->size() << " elements" << std::endl;
       for (auto& read: *chr) {
-	log("  Next read:");
+//	log("  Next read:");
 	  printout(read.second);
 	  runID++;
       }
@@ -227,7 +227,7 @@ void Genome::printout( ReadContainer* element ) {
     std::stringstream str;
     str << "    Chr: " << (int)element->chromosome << ", 5': " << (int)element->fivePrimeEnd << ", 3': " << (int)element->threePrimeEnd << std::endl;
     std::string line;
-    getline(str, line);
+//    getline(str, line);
     log(line);
     //    std::cout << "    " << element->threePrimeRead.size() << " elements downstream\n";
     for (auto& iter : element->threePrimeRead) {
