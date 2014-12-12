@@ -42,7 +42,7 @@ public:
   vPlot();
   
   virtual PlotChromosome* addChromosome( const Genome& genome, const chr_num_t num );
-  virtual void fromRead( ReadContainer* seed, const Genome& genome ) = 0;
+  virtual void fromRead( std::shared_ptr<ReadContainer> seed, const Genome& genome ) = 0;
   virtual void writeEps( const std::string& fileName ) const = 0;
   virtual void scale( const float factor ) = 0;
 

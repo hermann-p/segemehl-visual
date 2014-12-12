@@ -18,16 +18,15 @@ short int ReadContainer::length() const {
   return threePrimeEnd - fivePrimeEnd;
 }
 
-
 void ReadContainer::addDownstreamRead ( const Genome& genome, const chr_num_t chr, const chr_pos_t pos ) {
-  ReadContainer* dnstr = genome.getReadAt(chr, pos);
+  std::shared_ptr<ReadContainer> dnstr(genome.getReadAt(chr, pos));
   if (dnstr != nullptr) {
     int link = dnstr->findLink(this);
     if (link >= 0) { // this read supports an existing splice site
       dnstr->threePrimeRefs[link]++;
     }
     else { // this splicing was not yet known
-      dnstr->threePrimeRead.push_back(this);
+      dnstr->threePrimeRead.push_back(shared_from_this());
       dnstr->threePrimeRefs.push_back(1);
     }
   }
@@ -36,14 +35,14 @@ void ReadContainer::addDownstreamRead ( const Genome& genome, const chr_num_t ch
 
 void ReadContainer::addUpstreamRead ( const Genome& genome, const chr_num_t chr, const chr_pos_t pos ) {
   assume(pos <= 0, "3' ends need to be given as negative numbers!");
-  ReadContainer* upstr = genome.getReadAt(chr, pos); // 3' ends are linked at negative indices
+  std::shared_ptr<ReadContainer> upstr(genome.getReadAt(chr, pos)); // 3' ends are linked at negative indices
   if (upstr != nullptr) {
     int link = upstr->findLink(this, false);
     if (link >= 0) {
       threePrimeRefs[link]++;
     }
     else {
-      upstr->fivePrimeRead.push_back(this);
+      upstr->fivePrimeRead.push_back(shared_from_this());
       threePrimeRead.push_back(upstr);
       threePrimeRefs.push_back(1);
     }
@@ -62,8 +61,8 @@ int ReadContainer::findLink ( const ReadContainer* partner, const bool fwd ) con
 }
 
 
-ReadContainer::ReadContainer ( ) :
-  runID(0)
+ReadContainer::ReadContainer ( ) 
+: runID(0)
 {
 }
 

@@ -8,10 +8,17 @@
 #include <unordered_map>
 #include <fstream>
 #include <cstdlib>
+#include <memory>
 
 #include <sstream>
 #include <cstdio>
 #include <iostream>
+
+Genome::Genome() 
+: readPos(new chr_map_t)
+{
+}
+
 
 chr_num_t Genome::getChrNum ( const std::string name ) const {
   auto lookup = chrNums.find(name);
@@ -36,31 +43,31 @@ void Genome::createChromosome ( const std::string name, const uint32_t length ) 
   chrNames.push_back(name);
   chrLens.push_back(length);
   chrNums.emplace( name, N );
-  readPos->push_back(new std::map<chr_pos_t, ReadContainer*>());
+  readPos->push_back(new std::map<chr_pos_t, std::shared_ptr<ReadContainer>>());
 }
 
 
-ReadContainer* Genome::createRead( const chr_num_t chr, const chr_pos_t pos, const short len ) {
-  ReadContainer* rc = getReadAt(chr, pos);
+std::shared_ptr<ReadContainer> Genome::createRead( const chr_num_t chr, const chr_pos_t pos, const short len ) {
+  std::shared_ptr<ReadContainer> rc = getReadAt(chr, pos);
   if (rc == nullptr) {                      // no read on chr:pos exists yet
-    rc = new ReadContainer(chr, pos, len);
+    rc = std::make_shared<ReadContainer>(chr, pos, len);
     readPos->at(chr)->emplace(pos, rc);          // register read with genome navigation map
   }
   return rc;
 }
 
 
-ReadContainer* Genome::getReadAt ( const chr_num_t chr, const chr_pos_t pos ) const {
+std::shared_ptr<ReadContainer> Genome::getReadAt ( const chr_num_t chr, const chr_pos_t pos ) const {
   auto chromosome = readPos->at(chr);
   auto lookup = chromosome->find(pos);
   if (lookup == chromosome->end()) {
     return nullptr;
   }
-  return lookup->second;
+  return (*lookup).second;
 }
 
 
-ReadContainer* Genome::getReadAt ( const std::string chr, const chr_pos_t pos ) const {
+std::shared_ptr<ReadContainer> Genome::getReadAt ( const std::string chr, const chr_pos_t pos ) const {
   return getReadAt( getChrNum(chr), pos );
 }
 
@@ -178,9 +185,9 @@ bool Genome::parseDataLine ( const std::string& line ) {
     if (pos3 == pos5) {                        // Try to calc length from cigar-string (slow but should always work)
       pos3 = pos5 + calcLength(tokens[CIGAR]);
     }
-    ReadContainer* rc = getReadAt(chr, pos5);
+    std::shared_ptr<ReadContainer> rc = getReadAt(chr, pos5);
     if (rc == nullptr) {
-      rc = new ReadContainer(chr, pos5, pos3-pos5);
+      rc = std::make_shared<ReadContainer>(chr, pos5, pos3-pos5);
       registerRead(rc);
     }
     
@@ -199,14 +206,14 @@ bool Genome::parseDataLine ( const std::string& line ) {
   return true;
 }
 
-void Genome::registerRead (  ReadContainer* rc ) {
+void Genome::registerRead (  std::shared_ptr<ReadContainer> rc ) {
   const chr_num_t chr = rc->chromosome;
   readPos->at(chr)->emplace(rc->fivePrimeEnd, rc);   // Link 5' end to identify as successor
   readPos->at(chr)->emplace(-rc->threePrimeEnd, rc); // Link 3' end to identify as predecessor
 }
 
-
-void Genome::printout( ReadContainer* element ) {
+/*
+void Genome::printout( std::shared_ptr<ReadContainer> element ) {
   static uint runID = 1;
   assume(readPos->size() > 0, "Nothing to print...", false);
   if (element == nullptr) {
@@ -238,7 +245,7 @@ void Genome::printout( ReadContainer* element ) {
     }
   }
 }
-
+*/
 
 uint Genome::calcLength ( const std::string cigar ) const {
   int L = 0;

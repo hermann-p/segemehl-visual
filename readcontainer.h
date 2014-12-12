@@ -7,13 +7,14 @@
 #include <string>
 #include <map>
 #include <unordered_map>
+#include <memory>
 
-class ReadContainer {
+class ReadContainer : public std::enable_shared_from_this<ReadContainer> {
 public:
-  ReadContainer();
+  ReadContainer ();
   ReadContainer( const chr_num_t chromosome, const chr_pos_t p5, const short len );
-  std::vector<ReadContainer*> fivePrimeRead;
-  std::vector<ReadContainer*> threePrimeRead;
+  std::vector<std::shared_ptr<ReadContainer>> fivePrimeRead;
+  std::vector<std::shared_ptr<ReadContainer>> threePrimeRead;
   std::vector<unsigned short> threePrimeRefs;
   chr_num_t chromosome;
   chr_pos_t fivePrimeEnd;
@@ -21,7 +22,6 @@ public:
   unsigned char flags;
   short length() const;
   uint runID;
-
   
   void addUpstreamRead( const Genome& genome, const chr_num_t chr, const chr_pos_t pos );
   void addDownstreamRead( const Genome& genome, const chr_num_t chr, const chr_pos_t pos );
