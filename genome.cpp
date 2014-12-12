@@ -36,7 +36,7 @@ void Genome::createChromosome ( const std::string name, const uint32_t length ) 
   chrNames.push_back(name);
   chrLens.push_back(length);
   chrNums.emplace( name, N );
-  readPos.push_back(new std::map<chr_pos_t, ReadContainer*>());
+  readPos->push_back(new std::map<chr_pos_t, ReadContainer*>());
 }
 
 
@@ -44,14 +44,14 @@ ReadContainer* Genome::createRead( const chr_num_t chr, const chr_pos_t pos, con
   ReadContainer* rc = getReadAt(chr, pos);
   if (rc == nullptr) {                      // no read on chr:pos exists yet
     rc = new ReadContainer(chr, pos, len);
-    readPos[chr]->emplace(pos, rc);          // register read with genome navigation map
+    readPos->at(chr)->emplace(pos, rc);          // register read with genome navigation map
   }
   return rc;
 }
 
 
 ReadContainer* Genome::getReadAt ( const chr_num_t chr, const chr_pos_t pos ) const {
-  auto chromosome = readPos[chr];
+  auto chromosome = readPos->at(chr);
   auto lookup = chromosome->find(pos);
   if (lookup == chromosome->end()) {
     return nullptr;
@@ -137,6 +137,9 @@ bool Genome::parseDataLine ( const std::string& line ) {
     for (int i(0); i < QUAL; i++) iter++;
     for (;iter != tokens.end(); iter++) {
       if ((*iter)[0] == 'X') {
+	if ((*iter)[2] != ':' || (*iter)[4] != ':') { // doesn't suffice Xx:y:z, e. g. PHRED-String starting with X
+	  continue;
+	}
 	switch((*iter)[1]) {
 	  case 'X': // start of current split
 	    start = atoi( (*iter).substr(5).c_str() );
@@ -198,17 +201,17 @@ bool Genome::parseDataLine ( const std::string& line ) {
 
 void Genome::registerRead (  ReadContainer* rc ) {
   const chr_num_t chr = rc->chromosome;
-  readPos.at(chr)->emplace(rc->fivePrimeEnd, rc);   // Link 5' end to identify as successor
-  readPos.at(chr)->emplace(-rc->threePrimeEnd, rc); // Link 3' end to identify as predecessor
+  readPos->at(chr)->emplace(rc->fivePrimeEnd, rc);   // Link 5' end to identify as successor
+  readPos->at(chr)->emplace(-rc->threePrimeEnd, rc); // Link 3' end to identify as predecessor
 }
 
 
 void Genome::printout( ReadContainer* element ) {
   static uint runID = 1;
-  assume(readPos.size() > 0, "Nothing to print...", false);
+  assume(readPos->size() > 0, "Nothing to print...", false);
   if (element == nullptr) {
     int i(0);
-    for (auto& chr: readPos) {
+    for (auto& chr: *readPos) {
       std::cout << "Chromosome " << getChrName(i++) << " has " << chr->size() << " elements" << std::endl;
       for (auto& read: *chr) {
 //	log("  Next read:");

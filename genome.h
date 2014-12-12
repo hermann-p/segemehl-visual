@@ -39,7 +39,9 @@ private:
   chr_names_t chrNames; // vector: index# -> chromosome name
   chr_nums_t chrNums;   // map: string -> chromosome index#
   std::vector< unsigned short > chrLens;
-  std::vector< std::map<chr_pos_t, ReadContainer*>* > readPos; // [chr#].find(pos) -> read starting at pos on chromosome#
+  
+  // [chr#].find(pos) -> read starting at pos on chromosome# - on the heap because of size
+  std::vector< std::map<chr_pos_t, ReadContainer*>* >* readPos = new std::vector< std::map<chr_pos_t, ReadContainer*>* >(); 
   
   uint calcLength ( const std::string cigar ) const;
 
