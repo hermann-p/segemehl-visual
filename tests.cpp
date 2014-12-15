@@ -2,20 +2,19 @@
 #include "genome.h"
 #include "readcontainer.h"
 
-#include <vector>
-#include <string>
-#include <iostream>
-#include <fstream>
-
-#include <map>
+#include <memory>
 
 using namespace std;
 
-int main() {
-
-  Genome g;
-  ifstream file("out.sam");
-  file >> g;
-  g.printout();
+int main(int argc, char** argv) {
+  shared_ptr<Genome> g(new Genome());
+  string fileName;
+  if (argc > 1) {
+    fileName = argv[1];
+  }
+  else {
+    fileName = "out.sam";
+  }
+  g->read(fileName);
   return 0;
 }

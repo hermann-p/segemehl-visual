@@ -14,7 +14,7 @@ LinearPlot::LinearPlot()
 }
 
 
-void LinearPlot::fromRead ( std::shared_ptr<ReadContainer> seed, const Genome& genome ) {
+void LinearPlot::fromRead ( std::shared_ptr<ReadContainer> seed, const std::shared_ptr<Genome> genome ) {
   fromRead(seed, genome, width()/2, height()/2);
   runID++;
 }
@@ -23,7 +23,7 @@ void LinearPlot::fromRead ( std::shared_ptr<ReadContainer> seed, const Genome& g
 // Improved version that avoids zig-zagging through forward- and backward-links
 // Which could lead to splice variants without the original seed. Call with dir = 0 (default)
 // to start in both directions
-QGraphicsRectItem* LinearPlot::fromRead ( std::shared_ptr<ReadContainer> seed, const Genome& genome, const int x, const int y, const int dir ) {
+QGraphicsRectItem* LinearPlot::fromRead ( std::shared_ptr<ReadContainer> seed, const std::shared_ptr<Genome> genome, const int x, const int y, const int dir ) {
   seed->runID = runID;
   
   // Create graphics item for this exon

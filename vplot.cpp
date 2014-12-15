@@ -32,15 +32,15 @@ PlotChromosome::PlotChromosome ( vPlot* parent, const uint color_hint, const uns
 
 
 // Add a chromosome based on information from genome
-PlotChromosome* vPlot::addChromosome ( const Genome& genome, const chr_num_t num ) {
+PlotChromosome* vPlot::addChromosome ( const std::shared_ptr<Genome> genome, const chr_num_t num ) {
     auto lookup = chromosomes.find(num);
   if (lookup != chromosomes.end()) {
     return (lookup->second);
   }
-  PlotChromosome* chr = new PlotChromosome(this, pCol++, genome.getLength(num));
+  PlotChromosome* chr = new PlotChromosome(this, pCol++, genome->getLength(num));
   chromosomes.emplace(num, chr);
-  chr->length = genome.getLength(num);
-  QGraphicsTextItem* name = addText(genome.getChrName(num).c_str());
+  chr->length = genome->getLength(num);
+  QGraphicsTextItem* name = addText(genome->getChrName(num).c_str());
   name->setPos(chr->childrenBoundingRect().x() - 50, chr->childrenBoundingRect().center().y());
   name->moveBy(0, -12);
 //  chr->addToGroup(name);

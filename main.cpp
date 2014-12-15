@@ -10,10 +10,12 @@
 #include <QPainter>
 #include <QSize>
 
+#include <memory>
+
 
 int main(int argc, char** argv)
 {
-    Genome g;
+    std::shared_ptr <Genome> g(new Genome());
     std::string fileName;
     if (argc > 1) {
       fileName = argv[1];
@@ -21,12 +23,12 @@ int main(int argc, char** argv)
     else {
       fileName = "out.sam";
     }
-    g.read(fileName);
+    g->read(fileName);
     
     QApplication app(argc, argv);
     LinearPlot lp;
     
-    auto seed = g.getReadAt(1, 1);
+    auto seed = g->getReadAt(1, 1);
     assume(seed != nullptr, "Error, no read found!");
     lp.setSceneRect(0, 0, 1200, 300);
     lp.fromRead(seed, g);
