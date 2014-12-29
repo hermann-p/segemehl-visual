@@ -10,12 +10,17 @@
 #include <memory>
 
 class ReadContainer : public std::enable_shared_from_this<ReadContainer> {
+private:
+  typedef std::vector<std::shared_ptr<ReadContainer>> link_list_t;
 public:
   ReadContainer ();
   ReadContainer( const chr_num_t chromosome, const chr_pos_t p5, const short len );
-  std::vector<std::shared_ptr<ReadContainer>> fivePrimeRead;
-  std::vector<std::shared_ptr<ReadContainer>> threePrimeRead;
-  std::vector<unsigned short> threePrimeRefs;
+  ~ReadContainer();
+//  std::vector<std::shared_ptr<ReadContainer>> fivePrimeRead;
+//  std::vector<std::shared_ptr<ReadContainer>> threePrimeRead;
+  link_list_t* fivePrimeRead;
+  link_list_t* threePrimeRead;
+  std::vector<unsigned short>* threePrimeRefs;
   chr_num_t chromosome;
   chr_pos_t fivePrimeEnd;
   chr_pos_t threePrimeEnd;
@@ -27,7 +32,7 @@ public:
   void addDownstreamRead( const Genome& genome, const chr_num_t chr, const chr_pos_t pos );
 
 private:  
-  int findLink( const ReadContainer* partner, const bool fwd = true ) const;
+  int findLink( ReadContainer* partner, const bool fwd = true );
   enum FLAGS {
     REVERSE = 1,
     CIRCULAR = 2

@@ -76,6 +76,7 @@ void Genome::read ( std::ifstream& input ) {
   log("Genome: reading file...");
   unsigned int L(1);
   for (std::string line; getline(input, line);) {
+    std::cout << "Line #" << L << std::endl;
     if (line[0] == '@') {
       assume(parseHeaderLine(line), "Could not parse header in line " + std::to_string(L), false);
     }
@@ -211,42 +212,6 @@ void Genome::registerRead (  std::shared_ptr<ReadContainer> rc ) {
   readPos->at(chr)->emplace(rc->fivePrimeEnd, rc);   // Link 5' end to identify as successor
   readPos->at(chr)->emplace(-rc->threePrimeEnd, rc); // Link 3' end to identify as predecessor
 }
-
-/*
-void Genome::printout( std::shared_ptr<ReadContainer> element ) {
-  static uint runID = 1;
-  assume(readPos->size() > 0, "Nothing to print...", false);
-  if (element == nullptr) {
-    int i(0);
-    for (auto& chr: *readPos) {
-      std::cout << "Chromosome " << getChrName(i++) << " has " << chr->size() << " elements" << std::endl;
-      for (auto& read: *chr) {
-//	log("  Next read:");
-	  printout(read.second);
-	  runID++;
-      }
-    }
-  }
-  else {
-    //    std::cout << "    " << element->fivePrimeRead.size() << " elements upstream\n";
-    element->runID = runID; // mark as processed
-
-    for (auto& iter : element->fivePrimeRead) {
-      if (iter->runID != runID) printout(iter);
-    }
-    std::stringstream str;
-    str << "    Chr: " << (int)element->chromosome << ", 5': " << (int)element->fivePrimeEnd << ", 3': " << (int)element->threePrimeEnd << std::endl;
-    std::string line;
-//    getline(str, line);
-    log(line);
-    //    std::cout << "    " << element->threePrimeRead.size() << " elements downstream\n";
-    for (auto& iter : element->threePrimeRead) {
-      if (iter->runID != runID) printout(iter);
-    }
-  }
-}
-*/
-
 uint Genome::calcLength ( const std::string cigar ) const {
   int L = 0;
   std::string tmp = "";

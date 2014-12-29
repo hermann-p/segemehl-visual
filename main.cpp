@@ -10,12 +10,10 @@
 #include <QPainter>
 #include <QSize>
 
-#include <memory>
-
 
 int main(int argc, char** argv)
 {
-    std::shared_ptr <Genome> g(new Genome());
+    Genome* g(new Genome());
     std::string fileName;
     if (argc > 1) {
       fileName = argv[1];

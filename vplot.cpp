@@ -32,7 +32,7 @@ PlotChromosome::PlotChromosome ( vPlot* parent, const uint color_hint, const uns
 
 
 // Add a chromosome based on information from genome
-PlotChromosome* vPlot::addChromosome ( const std::shared_ptr<Genome> genome, const chr_num_t num ) {
+PlotChromosome* vPlot::addChromosome ( const Genome* genome, const chr_num_t num ) {
     auto lookup = chromosomes.find(num);
   if (lookup != chromosomes.end()) {
     return (lookup->second);
