@@ -5,23 +5,25 @@
 #include <string>
 #include <map>
 #include <unordered_map>
+#include <unordered_set>
 #include <fstream>
 #include <memory>
 
-class ReadContainer;
+class ReadContainer; // resolve dependency circle
 
-// Typedefs for simpler editing on reconsideration
-
+// Typedefs for flexibility on changing requirements
 typedef unsigned char chr_num_t;
 typedef int chr_pos_t;
 typedef std::vector<std::string> chr_names_t;
 typedef std::unordered_map<std::string, chr_num_t> chr_nums_t;
 typedef std::vector< std::map<chr_pos_t, std::shared_ptr<ReadContainer>>* > chr_map_t;
-
+typedef std::vector<std::shared_ptr<ReadContainer>> link_list_t;
+typedef std::unordered_set<std::shared_ptr<ReadContainer>> link_set_t;
 
 class Genome {
 public:
-  Genome();
+  Genome ( bool init_m = false, bool init_c = false );
+  ~Genome ();
   chr_num_t getChrNum ( const std::string name ) const;
   std::string getChrName ( const chr_num_t num ) const;
   std::shared_ptr<ReadContainer> getReadAt ( const chr_num_t chr, const chr_pos_t pos ) const;
@@ -35,8 +37,9 @@ public:
   void read ( std::ifstream& input );
   friend std::ifstream& operator >> ( std::ifstream& input, Genome& target );
 
-//  void printout ( std::shared_ptr<ReadContainer> element = nullptr );
-  
+  link_set_t* multistrand;
+  link_set_t* circular;
+
 private:
   chr_names_t chrNames; // vector: index# -> chromosome name
   chr_nums_t chrNums;   // map: string -> chromosome index#

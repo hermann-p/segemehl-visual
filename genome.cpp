@@ -14,9 +14,23 @@
 #include <cstdio>
 #include <iostream>
 
-Genome::Genome() 
-: readPos(new chr_map_t)
+Genome::Genome ( bool init_m, bool init_c ) 
+  : readPos(new chr_map_t),
+    multistrand((init_m) ? new link_set_t : nullptr),
+    circular((init_c) ? new link_set_t : nullptr)
 {
+}
+
+Genome::~Genome() {
+  for (auto& chromosome : *readPos) {
+    delete chromosome;
+  }
+  if (multistrand != nullptr) {
+    delete multistrand;
+  }
+  if (circular != nullptr) {
+    delete circular;
+  }
 }
 
 
@@ -76,7 +90,7 @@ void Genome::read ( std::ifstream& input ) {
   log("Genome: reading file...");
   unsigned int L(1);
   for (std::string line; getline(input, line);) {
-    std::cout << "Line #" << L << std::endl;
+    //    std::cout << "Line #" << L << std::endl;
     if (line[0] == '@') {
       assume(parseHeaderLine(line), "Could not parse header in line " + std::to_string(L), false);
     }
@@ -90,11 +104,12 @@ void Genome::read ( std::ifstream& input ) {
 
 void Genome::read ( std::string& fileName ) {
   std::ifstream input(fileName);
+  assume(input.good(), "Could not open file: " + fileName);
   read(input);
 }
 
 
-std::ifstream& operator>> ( std::ifstream& input, Genome& target ) {
+std::ifstream& operator >> ( std::ifstream& input, Genome& target ) {
   target.read(input);
   return input;
 }
@@ -104,7 +119,7 @@ bool Genome::parseHeaderLine ( const std::string& line ) {
   try {
     switch (line[1]) {
       case 'H': // Token @HD: General file info
-	log(line);
+	log(line + "\n" );
 	break;
       case 'S': { // Token @SQ: Reference dictionary entry
 	  auto tokens = strsplit(line, "\t", false);
@@ -114,11 +129,13 @@ bool Genome::parseHeaderLine ( const std::string& line ) {
 	}
 	break;
       case 'P': // Token @PG: program used
+	log(line + "\n");
 	assume(strsplit(line, "\t")[1] == "ID:segemehl", "This program is designed for segemehl output only!", false);
       default:  // Ignore other tokens
 	break;
     }
   } catch (const std::exception e) { // keep going on errors, but warn
+    std::cerr << e.what();
     return false;
   }
   return true;
@@ -126,12 +143,12 @@ bool Genome::parseHeaderLine ( const std::string& line ) {
 
 
 bool Genome::parseDataLine ( const std::string& line ) {
-  try {
+  //  try {
     auto tokens = strsplit(line, "\t");
-    // int flag = atoi( tokens[FLAG].c_str() );
+    unsigned char flags  = 0;
     chr_num_t chr = getChrNum(tokens[RNAME]);
     chr_pos_t pos5 = atoi( tokens[POS].c_str() );
-    chr_pos_t pos3 = pos5 + atoi( tokens[TLEN].c_str() );
+    chr_pos_t pos3;
     bool hasNext = false;
     chr_num_t nextChr = 0;
     chr_pos_t nextPos = 0;
@@ -149,61 +166,55 @@ bool Genome::parseDataLine ( const std::string& line ) {
 	  continue;
 	}
 	switch((*iter)[1]) {
-	  case 'X': // start of current split
-	    start = atoi( (*iter).substr(5).c_str() );
-	    break;
-	  case 'Y': // enf of current split
-	    end = atoi( (*iter).substr(5).c_str() );
-	    break;
-	  case 'Q': // number of current split
-	    break;
+	case 'X': // start of current split
+	  start = atoi( (*iter).substr(5).c_str() );
+	  break;
+	case 'Y': // enf of current split
+	  end = atoi( (*iter).substr(5).c_str() );
+	  break;
+	case 'Q': // number of current split
+	  flags |= ReadContainer::SPLIT;
+	  break;
 	  
-	  case 'P': // refseq of prev split
-	    hasPrev = true;
-	    prevChr = (chr_num_t)getChrNum( (*iter).substr(5) );
-	    break;
-	  case 'U': // 3' of prev
-	    prevPos = (chr_pos_t)atoi( (*iter).substr(5).c_str() );
-	    break;
-	    
-	  case 'C': // refseq of next split
-	    hasNext = true;
-	    nextChr = (chr_num_t)getChrNum( (*iter).substr(5) );
-	    break;
-	    
-	  case 'V': // 5' of next split
-	    nextPos = (chr_pos_t)atoi( (*iter).substr(5).c_str() );
-	    break;
-	  default:
-	    break;
+	case 'P': // refseq of prev split
+	  hasPrev = true;
+	  prevChr = (chr_num_t)getChrNum( (*iter).substr(5) );
+	  break;
+	case 'U': // 3' of prev
+	  prevPos = (chr_pos_t)atoi( (*iter).substr(5).c_str() );
+	  break;
+	  
+	case 'C': // refseq of next split
+	  hasNext = true;
+	  nextChr = (chr_num_t)getChrNum( (*iter).substr(5) );
+	  break;
+	  
+	case 'V': // 5' of next split
+	  nextPos = (chr_pos_t)atoi( (*iter).substr(5).c_str() );
+	  break;
+	default:
+	  break;
 	}
       }
     }
     
-    if (pos3 == pos5 && end - start > 0) {     // Try to fix length (information often missing or wrong in .sam)
-      pos3 = pos5 + (end-start);
-    }
-    if (pos3 == pos5) {                        // Try to calc length from cigar-string (slow but should always work)
-      pos3 = pos5 + calcLength(tokens[CIGAR]);
-    }
+    pos3 = pos5 + calcLength(tokens[CIGAR]);
     std::shared_ptr<ReadContainer> rc = getReadAt(chr, pos5);
     if (rc == nullptr) {
       rc = std::make_shared<ReadContainer>(chr, pos5, pos3-pos5);
       registerRead(rc);
     }
     
-//    std::cout << (int)chr << "@" << pos5 << "-" << pos3 << "; next: " << (int)nextChr << "@" << nextPos << "; prev: " << (int)prevChr << "@" << prevPos << std::endl;
-      
     if (hasNext) {
       rc->addDownstreamRead(*this, nextChr, nextPos);
     }
     if (hasPrev) {
       rc->addUpstreamRead(*this, prevChr, -prevPos);
     }
-    std::cout << std::endl;
-  } catch (const std::exception e) {
-    return false;
-  }
+//  } catch (const std::exception e) {
+//    std::cerr << e.what();
+//    return false;
+//  }
   return true;
 }
 

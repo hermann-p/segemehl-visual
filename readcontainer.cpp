@@ -8,6 +8,8 @@
 #include <unordered_map>
 #include <memory>
 
+#include <iostream>
+
 ReadContainer::~ReadContainer() {
   if (threePrimeRead != nullptr) delete threePrimeRead;
   if (threePrimeRefs != nullptr) delete threePrimeRefs;
@@ -27,18 +29,30 @@ short int ReadContainer::length() const {
 }
 
 void ReadContainer::addDownstreamRead ( const Genome& genome, const chr_num_t chr, const chr_pos_t pos ) {
-  std::shared_ptr<ReadContainer> dnstr(genome.getReadAt(chr, pos));
+  auto dnstr = genome.getReadAt(chr, pos);
   if (dnstr != nullptr) {
-    if (fivePrimeRead == nullptr) {
-      fivePrimeRead = new link_list_t;
+    // check if this is a multistrand splice junction
+    if (genome.multistrand != nullptr &&
+	dnstr->chromosome != chromosome) {
+      dnstr->flags |= MULTISTRAND;
+      flags |= MULTISTRAND;
+      log("multistrand detected\n");
+      genome.multistrand->insert(shared_from_this());
+      genome.multistrand->insert(dnstr);
     }
-    int link = dnstr->findLink(this);
-    if (link >= 0) { // this read supports an existing splice site
-      dnstr->threePrimeRefs->at(link)++;
+
+    int link = findLink(dnstr); // search link this => dnstr
+    int backLink = dnstr->findLink(shared_from_this(), false); // search link this <= dnstr
+
+    if (link == -1) { // this => dnstr unknown yet
+      threePrimeRead->push_back(dnstr);
+      threePrimeRefs->push_back(1);
     }
-    else { // this splicing was not yet known
-      dnstr->threePrimeRead->push_back(shared_from_this());
-      dnstr->threePrimeRefs->push_back(1);
+    else { // this => dnstr known
+      threePrimeRefs->at(link)++;
+    }
+    if (backLink == -1) { // this <= dnstr unknown yet
+      dnstr->fivePrimeRead->push_back(shared_from_this());
     }
   }
 }
@@ -46,36 +60,49 @@ void ReadContainer::addDownstreamRead ( const Genome& genome, const chr_num_t ch
 
 void ReadContainer::addUpstreamRead ( const Genome& genome, const chr_num_t chr, const chr_pos_t pos ) {
   assume(pos <= 0, "3' ends need to be given as negative numbers!");
-  std::shared_ptr<ReadContainer> upstr(genome.getReadAt(chr, pos)); // 3' ends are linked at negative indices
+  int ipos = pos - 1; // fix difference in one-based offsets
+  auto upstr = genome.getReadAt(chr, ipos); // 3' ends are linked at negative indices
   if (upstr != nullptr) {
-    if (threePrimeRefs == nullptr) {
-      threePrimeRead = new link_list_t();
-      threePrimeRefs = new std::vector<unsigned short>;
+
+    // check if this is a multistrand splice junction
+    if (genome.multistrand != nullptr &&
+	upstr->chromosome != chromosome) {
+      upstr->flags |= MULTISTRAND;
+      flags |= MULTISTRAND;
+      log("multistrand detected\n");
+      genome.multistrand->insert(shared_from_this());
+      genome.multistrand->insert(upstr);
     }
-    int link = upstr->findLink(this, false);
-    if (link >= 0) {
-      threePrimeRefs->at(link)++;
+    
+    int link = findLink(upstr, false); // search link  upstr <= this
+    int backLink = upstr->findLink(shared_from_this()); // search link upstr => this
+
+    if (link == -1) { // upstr <= this unknown yet
+      fivePrimeRead->push_back(upstr);
     }
-    else {
-      upstr->fivePrimeRead->push_back(shared_from_this());
-      threePrimeRead->push_back(upstr);
-      threePrimeRefs->push_back(1);
+
+    if (backLink >= 0) { // upstr => this known
+      upstr->threePrimeRefs->at(backLink)++;
+    }
+    else { // upstr => this new
+      upstr->threePrimeRead->push_back(shared_from_this());
+      upstr->threePrimeRefs->push_back(1);
     }
   }
 }
 
 
-int ReadContainer::findLink ( ReadContainer* partner, const bool fwd ) {
-  if (fwd && threePrimeRead == nullptr) {
+int ReadContainer::findLink ( std::shared_ptr<ReadContainer> partner, const bool downstream ) {
+  if (downstream && threePrimeRead == nullptr) {
     threePrimeRead = new link_list_t;
     threePrimeRefs = new std::vector<unsigned short>;
     return -1;
   }
-  else if (!fwd && fivePrimeRead == nullptr) {
+  else if (!downstream && fivePrimeRead == nullptr) {
     fivePrimeRead = new link_list_t;
     return -1;
   }
-  auto candidates = (fwd) ? threePrimeRead : fivePrimeRead;
+  auto candidates = (downstream) ? threePrimeRead : fivePrimeRead;
   for (size_t i(0); i < candidates->size(); i++) {
     if (*candidates->at(i) == *partner) {
       return i;
@@ -104,7 +131,16 @@ ReadContainer::ReadContainer ( const chr_num_t chromosome, const chr_pos_t p5, c
   fivePrimeRead(nullptr),
   threePrimeRefs(nullptr)
 {
+  //  std::cout << "Read: " << *this << std::endl;
   if (len < 0) {
     flags &= REVERSE;
   }
+}
+
+
+std::ostream& operator << ( std::ostream& output, ReadContainer& rc ) {
+  output << std::to_string(rc.fivePrimeEnd) << "-" <<
+    std::to_string(rc.threePrimeEnd) << " @ " <<
+    std::to_string(rc.chromosome);
+  return output;
 }
