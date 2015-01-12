@@ -24,7 +24,7 @@ void LinearPlot::fromRead ( std::shared_ptr<ReadContainer> seed, const Genome* g
 // Which could lead to splice variants without the original seed. Call with dir = 0 (default)
 // to start in both directions
 QGraphicsRectItem* LinearPlot::fromRead ( std::shared_ptr<ReadContainer> seed, const Genome* genome, const int x, const int y, const int dir ) {
-  seed->runID = runID;
+  seed->flags |= ReadContainer::PROCESSED;
   
   // Create graphics item for this exon
   PlotChromosome* chr = addChromosome(genome, seed->chromosome);
@@ -46,7 +46,7 @@ QGraphicsRectItem* LinearPlot::fromRead ( std::shared_ptr<ReadContainer> seed, c
       y0 += y_dist / 2;
     }
     for (auto& el : *(seed->fivePrimeRead)) {
-      if (el->runID != runID) {
+      if (!(el->flags & ReadContainer::PROCESSED)) {
 	int xpos = x + x_dist + seed->length()/2 + el->length()/2;
 	fromRead(el, genome, xpos, y0, BACKWARDS);
 	y0 += y_dist;
@@ -62,7 +62,7 @@ QGraphicsRectItem* LinearPlot::fromRead ( std::shared_ptr<ReadContainer> seed, c
       y0 += y_dist / 2;
     }
     for (auto& el : *(seed->threePrimeRead)) {
-      if (el->runID != runID) {
+      if (!(el->flags & ReadContainer::PROCESSED)) {
 	int xpos = x - x_dist - seed->length()/2 - el->length()/2;	
 	fromRead(el, genome, xpos, y0, FORWARD);
 	y0 += y_dist;

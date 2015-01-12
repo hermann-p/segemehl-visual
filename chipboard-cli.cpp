@@ -11,8 +11,18 @@
 #include <string>
 #include <memory>
 
+// QT headers
+#include <QtGui/QApplication>
+#include <QPrinter>
+#include <QPainter>
+#include <QSize>
+#include <QString>
+#include <QGraphicsView>
+
 using namespace std;
 
+#define WIDTH 1024
+#define HEIGHT 768
 
 // Store command line options
 struct Options {
@@ -21,9 +31,9 @@ struct Options {
   bool multistrand = false;
   vector< pair<chr_num_t, chr_pos_t> > reads;
   string fileName = "";
-  int xres = 800;
-  int yres = 600;
-  string outFileName = "cb_out.pdf";
+  int xres = WIDTH;
+  int yres = HEIGHT;
+  char* outFileName = "cb_out.pdf";
 };
 
 
@@ -73,8 +83,8 @@ void parseOptions ( int argc, char** argv, Options* options ) {
 	unsigned int w = atoi(dims[0].c_str());
 	unsigned int h = atoi(dims[0].c_str());
 	if (w + h == 0) { // erroneous arguments
-	  w = 800;
-	  h = 600;
+	  w = WIDTH;
+	  h = HEIGHT;
 	}
 	else {
 	  w = (w != 0) ? w : h * 4 / 3;
@@ -123,34 +133,62 @@ int main ( int argc, char** argv ) {
 
   Genome* g = new Genome(options.multistrand, options.circular);
   g->read(options.fileName);
+
+  QApplication app(argc, argv); // needed for pre-setup of QT elements
   auto* plots(new vector< shared_ptr<vPlot> >);
   
   if (options.circular) {
     cout << "Skipping circular detection: not implemented yet" << endl;
-    return 1;
   }
 
   if (options.multistrand) {
     for (auto& seed : *(g->multistrand)) {
-      if (seed->flags & ReadContainer::MULTISTRAND) {
+      cout << "MS seed: " << *seed << " flags: " << std::to_string(seed->flags) << endl;
+      cout << ((seed->flags & ReadContainer::PROCESSED) ? "processed" : "not processed") << endl;
+      if (!(seed->flags & ReadContainer::PROCESSED)) {
+ 	cout << "  initialising pointer...";
 	shared_ptr<vPlot> plot(new LinearPlot());
+ 	cout << " creating plot...";
+ 	plot->fromRead(seed, g);
+ 	cout << "done" << endl;
+ 	plots->push_back(plot);
+      }
+    }
+  }
+  
+  if (!options.reads.empty()) {
+    for (auto& tpl : options.reads) {
+      shared_ptr<vPlot> plot(new LinearPlot());
+      auto seed = g->getReadAt(tpl.first, tpl.second);
+      if (seed != nullptr) {
 	plot->fromRead(seed, g);
 	plots->push_back(plot);
       }
     }
   }
 
-  if (!options.reads.empty()) {
-    for (auto& tpl : options.reads) {
-      try {
-	shared_ptr<vPlot> plot(new LinearPlot());
-	plot->fromRead(g->getReadAt(tpl.first, tpl.second), g);
-	plots->push_back(plot);
-      } catch (std::exception e) {
-      }
+  if (plots->empty()) {
+    cout << "No transcripts matching your criteria found" << endl;
+  }
+  else {
+    cout << "Successfully created " << plots->size() << " plots" << endl;
+    cout << "Writing to " << options.outFileName << endl;
+    QPrinter printer;
+    //    printer.setOutputFormat(QPrinter::PdfFormat); // automatically if .pdf or .ps
+    printer.setOutputFileName(options.outFileName);
+    printer.setOrientation(QPrinter::Landscape);
+    printer.setPaperSize(QSize(options.xres, options.yres), QPrinter::Point);
+
+    QPainter painter(&printer);
+    for (auto plot : *plots) {
+      QGraphicsView view(plot.get());
+      view.render(&painter);
+      printer.newPage();
     }
   }
 
+//  string tmp;
+//  cin >> tmp;
   delete g;
   return 0;
 }

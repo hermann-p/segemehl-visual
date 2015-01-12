@@ -99,6 +99,13 @@ void Genome::read ( std::ifstream& input ) {
     }
     L++;
   }
+  if (multistrand != nullptr) {
+    log("Found " + std::to_string(multistrand->size()) + " strand switching events");
+  }
+  if (circular != nullptr) {
+    log("Found " + std::to_string(circular->size()) + " circular transcripts");
+  }
+
 }
 
 
@@ -203,6 +210,7 @@ bool Genome::parseDataLine ( const std::string& line ) {
     if (rc == nullptr) {
       rc = std::make_shared<ReadContainer>(chr, pos5, pos3-pos5);
       registerRead(rc);
+      rc->flags |= flags;
     }
     
     if (hasNext) {

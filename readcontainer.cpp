@@ -33,10 +33,9 @@ void ReadContainer::addDownstreamRead ( const Genome& genome, const chr_num_t ch
   if (dnstr != nullptr) {
     // check if this is a multistrand splice junction
     if (genome.multistrand != nullptr &&
-	dnstr->chromosome != chromosome) {
+	(dnstr->chromosome != chromosome || dnstr->flags & MULTISTRAND == MULTISTRAND)) {
       dnstr->flags |= MULTISTRAND;
       flags |= MULTISTRAND;
-      log("multistrand detected\n");
       genome.multistrand->insert(shared_from_this());
       genome.multistrand->insert(dnstr);
     }
@@ -66,10 +65,9 @@ void ReadContainer::addUpstreamRead ( const Genome& genome, const chr_num_t chr,
 
     // check if this is a multistrand splice junction
     if (genome.multistrand != nullptr &&
-	upstr->chromosome != chromosome) {
+	(upstr->chromosome != chromosome || upstr->flags & MULTISTRAND == MULTISTRAND)) {
       upstr->flags |= MULTISTRAND;
       flags |= MULTISTRAND;
-      log("multistrand detected\n");
       genome.multistrand->insert(shared_from_this());
       genome.multistrand->insert(upstr);
     }
@@ -113,10 +111,10 @@ int ReadContainer::findLink ( std::shared_ptr<ReadContainer> partner, const bool
 
 
 ReadContainer::ReadContainer ( ) 
-: runID(0),
-threePrimeRead(nullptr),
-fivePrimeRead(nullptr),
-threePrimeRefs(nullptr)
+: threePrimeRead(nullptr),
+  fivePrimeRead(nullptr),
+  threePrimeRefs(nullptr),
+  flags(0)
 {
 }
 
@@ -126,14 +124,13 @@ ReadContainer::ReadContainer ( const chr_num_t chromosome, const chr_pos_t p5, c
   chromosome(chromosome),
   fivePrimeEnd(p5),
   threePrimeEnd(p5 + len),
-  runID(0),
   threePrimeRead(nullptr),
   fivePrimeRead(nullptr),
-  threePrimeRefs(nullptr)
+  threePrimeRefs(nullptr),
+  flags(0)
 {
-  //  std::cout << "Read: " << *this << std::endl;
   if (len < 0) {
-    flags &= REVERSE;
+    flags |= REVERSE;
   }
 }
 

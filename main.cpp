@@ -1,5 +1,4 @@
 #include <QtGui/QApplication>
-//#include "chipboard.h"
 #include "linplot.h"
 #include "genome.h"
 #include "utils.h"

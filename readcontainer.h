@@ -27,14 +27,15 @@ public:
   chr_pos_t threePrimeEnd;
   unsigned char flags;
   short length() const;
-  uint runID;
+//  uint runID;
 
-  enum FLAGS {
+  static enum {
     REVERSE = 1,
     CIRCULAR = 2,
     SPLIT = 4,
-    MULTISTRAND = 8
-  };
+    MULTISTRAND = 8,
+    PROCESSED = 128
+  } FLAGS;
 
 private:  
   int findLink( std::shared_ptr<ReadContainer> partner, const bool fwd = true );
