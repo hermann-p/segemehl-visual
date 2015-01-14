@@ -150,7 +150,6 @@ bool Genome::parseHeaderLine ( const std::string& line ) {
 
 
 bool Genome::parseDataLine ( const std::string& line ) {
-  //  try {
     auto tokens = strsplit(line, "\t");
     unsigned char flags  = 0;
     chr_num_t chr = getChrNum(tokens[RNAME]);
@@ -213,16 +212,12 @@ bool Genome::parseDataLine ( const std::string& line ) {
       rc->flags |= flags;
     }
     
-    if (hasNext) {
-      rc->addDownstreamRead(*this, nextChr, nextPos);
-    }
+//    if (hasNext) {
+//      rc->addDownstreamRead(*this, nextChr, nextPos);
+//    }
     if (hasPrev) {
       rc->addUpstreamRead(*this, prevChr, -prevPos);
     }
-//  } catch (const std::exception e) {
-//    std::cerr << e.what();
-//    return false;
-//  }
   return true;
 }
 

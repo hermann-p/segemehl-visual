@@ -6,32 +6,14 @@
 #define VPLOT_H
 
 #include "genome.h"
+#include "plotchromosome.h"
+
 #include <QGraphicsScene>
 #include <QGraphicsItemGroup>
 
 #include <memory>
 
 
-/**
- * Representation of a chromosomes
- */
-class vPlot;
-
-class PlotChromosome : public QGraphicsItemGroup {
-public:
-  PlotChromosome ( vPlot* parent, const uint color_hint, const unsigned short len );
-  
-  QColor color;
-  QPen pen;
-  QBrush brush;
-  
-  std::string name;
-  std::vector<std::string> exonNames;
-  uint32_t length;
-  QRect boundingRect;
-  
-  int fivePrime;
-};
 
 
 /**
@@ -47,6 +29,7 @@ public:
   virtual void fromRead( std::shared_ptr<ReadContainer> seed, const Genome* genome ) = 0;
   virtual void writeEps( const std::string& fileName ) const = 0;
   virtual void scale( const float factor ) = 0;
+  virtual void fitTo( const int w, const int h ) = 0;
 
   std::map<chr_num_t, PlotChromosome*> chromosomes;
   uint pCol;

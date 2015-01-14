@@ -33,7 +33,7 @@ struct Options {
   string fileName = "";
   int xres = WIDTH;
   int yres = HEIGHT;
-  char* outFileName = "cb_out.pdf";
+  string outFileName = "cb_out.pdf";
 };
 
 
@@ -44,7 +44,7 @@ void printUsage (char** args) {
 Arguments:\n\
     -h            print this help and exit\n\
     -r WxH        set output width and height in pixels (won't affect vector graphics)\n\
-    -o filename   set output file name\n\
+    -o filename   set output file name (.pdf or .ps)\n\
 At least one required:\n\
     -c            detect all circular transcripts (not implemented yet)\n\
     -m            detect all multistrand spliced transcripts\n\
@@ -173,10 +173,10 @@ int main ( int argc, char** argv ) {
   else {
     cout << "Successfully created " << plots->size() << " plots" << endl;
     cout << "Writing to " << options.outFileName << endl;
-    QPrinter printer;
+    QPrinter printer(QPrinter::HighResolution);
     //    printer.setOutputFormat(QPrinter::PdfFormat); // automatically if .pdf or .ps
-    printer.setOutputFileName(options.outFileName);
-    printer.setOrientation(QPrinter::Landscape);
+    printer.setOutputFileName(options.outFileName.c_str());
+    //    printer.setOrientation(QPrinter::Landscape);
     printer.setPaperSize(QSize(options.xres, options.yres), QPrinter::Point);
 
     QPainter painter(&printer);
