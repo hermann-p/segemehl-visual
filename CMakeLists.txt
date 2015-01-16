@@ -7,19 +7,19 @@ if (NOT Cxx11_SUPPORTED)
   message(FATAL_ERROR "Compiler with C++11 support required!")
 endif()
 
-find_package(Qt4 REQUIRED)
+#find_package(Qt4 REQUIRED)
 
 include_directories(${QT_INCLUDES} ${CMAKE_CURRENT_BINARY_DIR})
 
-set(shared_sources vplot.cpp linplot.cpp genome.cpp readcontainer.cpp utils.cpp plotchromosome.cpp)
+set(shared_sources genome.cpp readcontainer.cpp utils.cpp plotchromosome2.cpp vplot2.cpp linplot2.cpp)
 
-set(CMAKE_CXX_FLAGS "-std=c++11 -g")
+set(CMAKE_CXX_FLAGS "-std=c++11 -g -fpermissive")
 
-qt4_automoc(${shared_sources})
+#qt4_automoc(${shared_sources})
 add_library(shared_objects ${shared_sources})
 
-add_executable(chipboard main.cpp)
-target_link_libraries(chipboard ${QT_QTCORE_LIBRARY} ${QT_QTGUI_LIBRARY} shared_objects)
+#add_executable(chipboard main.cpp)
+#target_link_libraries(chipboard ${QT_QTCORE_LIBRARY} ${QT_QTGUI_LIBRARY} shared_objects)
 
 add_executable(chipboard-cli chipboard-cli.cpp)
 target_link_libraries(chipboard-cli ${QT_QTCORE_LIBRARY} ${QT_QTGUI_LIBRARY} shared_objects)

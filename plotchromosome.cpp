@@ -18,6 +18,7 @@ PlotChromosome::PlotChromosome ( vPlot* parent, const uint color_hint, const uns
 {  
   int x = parent->width() / 2;
   fivePrime = x - len/2;
+  log( "chr: " + std::to_string(x) + ", " + std::to_string(fivePrime) );
   int y = (1 + color_hint) * 2 * parent->y_dist;
   QGraphicsLineItem* theChr = parent->addLine(fivePrime, y, x + len/2, y, pen);
   addToGroup(theChr);
@@ -42,10 +43,9 @@ QGraphicsRectItem* PlotChromosome::addExon ( vPlot* parent, const int p1, const 
 void PlotChromosome::fitTo ( const int width, const bool full ) {
   assume(full, "shortening not supported yet", false);
   float scale = 1.0f * width / childrenBoundingRect().width();
-  float dx = (childrenBoundingRect().left() + 50);
+  float dx = childrenBoundingRect().center().x() - width/2;
   QTransform matrix(scale, 0.0f, 0.0f,
 		    0.0f, 1.0f, 0.0f,
-		    dx*scale, 0.0f, 1.0f); // combine translation and x-scaling
-  //  matrix.reset();
+		    dx, 0.0f, 1.0f); // combine translation and x-scaling
   setTransform( matrix );
 }

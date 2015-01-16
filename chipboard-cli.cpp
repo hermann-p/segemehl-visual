@@ -2,7 +2,7 @@
 #include "genome.h"
 #include "readcontainer.h"
 #include "utils.h"
-#include "linplot.h"
+#include "linplot2.h"
 
 // System headers
 #include <iostream>
@@ -10,14 +10,6 @@
 #include <unistd.h>
 #include <string>
 #include <memory>
-
-// QT headers
-#include <QtGui/QApplication>
-#include <QPrinter>
-#include <QPainter>
-#include <QSize>
-#include <QString>
-#include <QGraphicsView>
 
 using namespace std;
 
@@ -33,7 +25,7 @@ struct Options {
   string fileName = "";
   int xres = WIDTH;
   int yres = HEIGHT;
-  string outFileName = "cb_out.pdf";
+  string outFileName = "cb_out";
 };
 
 
@@ -44,7 +36,7 @@ void printUsage (char** args) {
 Arguments:\n\
     -h            print this help and exit\n\
     -r WxH        set output width and height in pixels (won't affect vector graphics)\n\
-    -o filename   set output file name (.pdf or .ps)\n\
+    -o filename   set output file name (.eps)\n\
 At least one required:\n\
     -c            detect all circular transcripts (not implemented yet)\n\
     -m            detect all multistrand spliced transcripts\n\
@@ -134,7 +126,6 @@ int main ( int argc, char** argv ) {
   Genome* g = new Genome(options.multistrand, options.circular);
   g->read(options.fileName);
 
-  QApplication app(argc, argv); // needed for pre-setup of QT elements
   auto* plots(new vector< shared_ptr<vPlot> >);
   
   if (options.circular) {
@@ -144,13 +135,9 @@ int main ( int argc, char** argv ) {
   if (options.multistrand) {
     for (auto& seed : *(g->multistrand)) {
       cout << "MS seed: " << *seed << " flags: " << std::to_string(seed->flags) << endl;
-      cout << ((seed->flags & ReadContainer::PROCESSED) ? "processed" : "not processed") << endl;
       if (!(seed->flags & ReadContainer::PROCESSED)) {
- 	cout << "  initialising pointer...";
 	shared_ptr<vPlot> plot(new LinearPlot());
- 	cout << " creating plot...";
  	plot->fromRead(seed, g);
- 	cout << "done" << endl;
  	plots->push_back(plot);
       }
     }
@@ -162,6 +149,7 @@ int main ( int argc, char** argv ) {
       auto seed = g->getReadAt(tpl.first, tpl.second);
       if (seed != nullptr) {
 	plot->fromRead(seed, g);
+	cout << "created." << endl;
 	plots->push_back(plot);
       }
     }
@@ -172,18 +160,11 @@ int main ( int argc, char** argv ) {
   }
   else {
     cout << "Successfully created " << plots->size() << " plots" << endl;
-    cout << "Writing to " << options.outFileName << endl;
-    QPrinter printer(QPrinter::HighResolution);
-    //    printer.setOutputFormat(QPrinter::PdfFormat); // automatically if .pdf or .ps
-    printer.setOutputFileName(options.outFileName.c_str());
-    //    printer.setOrientation(QPrinter::Landscape);
-    printer.setPaperSize(QSize(options.xres, options.yres), QPrinter::Point);
-
-    QPainter painter(&printer);
+    int i = 0;
     for (auto plot : *plots) {
-      QGraphicsView view(plot.get());
-      view.render(&painter);
-      printer.newPage();
+      string fname = options.outFileName + std::to_string(i) + ".eps";
+      cout << "writing " << fname << endl;
+      plot->writeEps(fname);
     }
   }
 

@@ -23,7 +23,7 @@ int main(int argc, char** argv)
     g->read(fileName);
     
     QApplication app(argc, argv);
-    LinearPlot lp;
+    LinearPlot lp();
     
     auto seed = g->getReadAt(1, 1);
     assume(seed != nullptr, "Error, no read found!");

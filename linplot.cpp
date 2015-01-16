@@ -16,13 +16,7 @@ LinearPlot::LinearPlot()
 
 void LinearPlot::fromRead ( std::shared_ptr<ReadContainer> seed, const Genome* genome ) {
   fromRead(seed, genome, width()/2, height()/2);
-//  int biggest = 0;
-  for (auto& chr : chromosomes) {
-//    auto w = chr.childrenBoundingRect().width();
-//    biggest = (w > biggest) ? w : biggest;
-    chr.second->fitTo( 1024 );
-  }
-  
+  fitTo(500, 0);
   runID++;
 }
 
@@ -79,7 +73,15 @@ QGraphicsRectItem* LinearPlot::fromRead ( std::shared_ptr<ReadContainer> seed, c
 }
 
 void LinearPlot::fitTo ( const int w, const int h ) {
-  
+  int biggest = 0;
+  for (auto& chr : chromosomes) {
+    auto w = chr.second->childrenBoundingRect().width();
+    biggest = (w > biggest) ? w : biggest;
+  }
+  float factor = 1.0 * w / biggest;
+  for (auto& chr : chromosomes) {
+    chr.second->fitTo( w * factor );
+  }
 }
 
 void LinearPlot::writeEps ( const std::string& fileName ) const {

@@ -36,18 +36,21 @@ Genome::~Genome() {
 
 chr_num_t Genome::getChrNum ( const std::string name ) const {
   auto lookup = chrNums.find(name);
-  assume(lookup != chrNums.end(), "Chromosome " + name + " not found");
+  assume(lookup != chrNums.end(), "Genome::getChrNum: Chromosome " + name + " not found");
   return lookup->second;
 }
 
 
 std::string Genome::getChrName ( const chr_num_t num ) const {
-  assume(num < chrNames.size() && num >= 0, "Index out of range");
+  assume(!chrNames.empty(), "Genome::getChrName: name list empty");
+  assume(num < chrNames.size(),
+	 "Genome::getChrName Index " + std::to_string(num) + " out of range (" +
+	 std::to_string(chrNames.size()) + ")");
   return chrNames[num];
 }
 
 short unsigned int Genome::getLength ( const chr_num_t n ) const {
-  assume(n < chrLens.size(), "Can not find length of nonexistant chromosome");
+  assume(n < chrLens.size(), "Genome::getLength: index out of range");
   return chrLens.at(n);
 }
 
