@@ -145,7 +145,7 @@ int main ( int argc, char** argv ) {
   
   if (!options.reads.empty()) {
     for (auto& tpl : options.reads) {
-      shared_ptr<vPlot> plot(new LinearPlot());
+      shared_ptr<vPlot> plot(new LinearPlot(40, 20));
       auto seed = g->getReadAt(tpl.first, tpl.second);
       if (seed != nullptr) {
 	plot->fromRead(seed, g);
