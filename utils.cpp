@@ -26,17 +26,19 @@ void assume ( const bool isGood, const std::string msg, bool fatal ) {
 
 
 std::vector< std::string > strsplit ( const std::string input, const std::string& delim, bool keepEmpty ) {
-  std::string token, theStr = input;
+  std::string token, theStr(input);
   int L = delim.length();
   std::unique_ptr<std::vector< std::string >> result(new std::vector<std::string>());
-  
-  while (token != theStr) {
-    auto end = theStr.find_first_of(delim);
-    token = theStr.substr(0, end);
-    theStr = theStr.substr(end + L);
-    if (keepEmpty || token.length() > 0) {
+  int end(0);
+  int start(0);  
+  while (end >= 0) {
+    end = theStr.find_first_of(delim, start);
+    //    theStr = theStr.substr(end + L);
+    if (keepEmpty || end != start) {
+      token = theStr.substr(start, end-start);
       result->push_back(token);
     }
+    start = end + L;
   }
   return *result;
 }

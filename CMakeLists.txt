@@ -24,8 +24,8 @@ add_library(shared_objects ${shared_sources})
 add_executable(chipboard-cli chipboard-cli.cpp)
 target_link_libraries(chipboard-cli ${QT_QTCORE_LIBRARY} ${QT_QTGUI_LIBRARY} shared_objects)
 
-#add_executable(testrun tests.cpp)
-#target_link_libraries(testrun ${QT_QTCORE_LIBRARY} ${QT_QTGUI_LIBRARY} shared_objects)
+add_executable(tests tests.cpp)
+target_link_libraries(tests ${QT_QTCORE_LIBRARY} ${QT_QTGUI_LIBRARY} shared_objects)
 
 
 #install(TARGETS chipboard RUNTIME DESTINATION bin)

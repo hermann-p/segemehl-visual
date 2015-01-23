@@ -21,7 +21,7 @@ struct Options {
   bool valid = false;
   bool circular = false;
   bool multistrand = false;
-  vector< pair<chr_num_t, chr_pos_t> > reads;
+  vector< pair<string, chr_pos_t> > reads;
   string fileName = "";
   int xres = WIDTH;
   int yres = HEIGHT;
@@ -78,9 +78,9 @@ void parseOptions ( int argc, char** argv, Options* options ) {
 	  w = WIDTH;
 	  h = HEIGHT;
 	}
-	else {
-	  w = (w != 0) ? w : h * 4 / 3;
-	  h = (h != 0) ? h : w * 3 / 4;
+	else { // one argument given: set aspect ratio
+	  w = (w != 0) ? w : h * 1.33;
+	  h = (h != 0) ? h : w * 0.75;
 	}
       }
       break;
@@ -91,9 +91,8 @@ void parseOptions ( int argc, char** argv, Options* options ) {
 	options->valid = false;
 	return;
       }
-      auto chr = (chr_num_t)atoi(values[0].c_str());
       auto pos = (chr_pos_t)atoi(values[1].c_str());
-      pair<chr_num_t, chr_pos_t> readPos(chr, pos);
+      pair<string, chr_pos_t> readPos(values[0], pos);
       options->reads.push_back(readPos);
       if (options->fileName != "") {
 	options->valid = true;
@@ -120,7 +119,7 @@ int main ( int argc, char** argv ) {
   }
   cout << "Options successfully set" << endl;
   for (auto& chrpos : options.reads) {
-    cout <<  "    " << to_string(chrpos.first) << ":" << chrpos.second << endl;
+    cout <<  "    " << chrpos.first << ":" << chrpos.second << endl;
   }
 
   Genome* g = new Genome(options.multistrand, options.circular);
@@ -130,46 +129,43 @@ int main ( int argc, char** argv ) {
   
   if (options.circular) {
     cout << "Skipping circular detection: not implemented yet" << endl;
+    uint N(0);
+    for (auto& seed : *(g->circular)) {
+      cout << "Circular seed: " << *seed << " flags: " << to_string(seed->flags) << endl;
+      if (!(seed->flags & ReadContainer::PROCESSED)) {
+	LinearPlot plot;
+ 	plot.fromRead(seed, g);
+	plot.writeEps(options.outFileName + "_circ_" + to_string(++N) + ".eps");
+      }
+    }
+
   }
 
   if (options.multistrand) {
+    uint N(0);
     for (auto& seed : *(g->multistrand)) {
-      cout << "MS seed: " << *seed << " flags: " << std::to_string(seed->flags) << endl;
       if (!(seed->flags & ReadContainer::PROCESSED)) {
-	shared_ptr<vPlot> plot(new LinearPlot());
- 	plot->fromRead(seed, g);
- 	plots->push_back(plot);
+	cout << "MS seed: " << *seed << " flags: " << to_string(seed->flags) << endl;
+	LinearPlot plot;
+ 	plot.fromRead(seed, g);
+	plot.writeEps(options.outFileName + "_multi_" + to_string(++N) + ".eps");
       }
     }
   }
   
   if (!options.reads.empty()) {
+    uint N(0);
     for (auto& tpl : options.reads) {
       shared_ptr<vPlot> plot(new LinearPlot(40, 20));
       auto seed = g->getReadAt(tpl.first, tpl.second);
-      if (seed != nullptr) {
-	plot->fromRead(seed, g);
-	cout << "created." << endl;
-	plots->push_back(plot);
+      if (seed != nullptr & !(seed->flags & ReadContainer::PROCESSED)) { // only existing, new plots
+	LinearPlot plot;
+ 	plot.fromRead(seed, g);
+	plot.writeEps(options.outFileName + "_pos_" + to_string(++N) + ".eps");
       }
     }
   }
 
-  if (plots->empty()) {
-    cout << "No transcripts matching your criteria found" << endl;
-  }
-  else {
-    cout << "Successfully created " << plots->size() << " plots" << endl;
-    int i = 0;
-    for (auto plot : *plots) {
-      string fname = options.outFileName + std::to_string(i) + ".eps";
-      cout << "writing " << fname << endl;
-      plot->writeEps(fname);
-    }
-  }
-
-//  string tmp;
-//  cin >> tmp;
   delete g;
   return 0;
 }
