@@ -3,7 +3,7 @@
 
 #include <fstream>
 
-LinearPlot::LinearPlot(int dx, int dy) 
+LinearPlot::LinearPlot ( int dx, int dy ) 
   : vPlot(),
     dx(dx), dy(dy),
     minx(0), maxx(0), miny(0), maxy(0),
@@ -18,7 +18,7 @@ void LinearPlot::fromRead ( std::shared_ptr<ReadContainer> seed, Genome* genome 
   }
 }
 
-void LinearPlot::fromRead ( std::shared_ptr<ReadContainer> seed, Genome* g, const int x, const int y, std::shared_ptr<Exon> pred ) {
+void LinearPlot::fromRead ( std::shared_ptr<ReadContainer> seed, Genome* g, const int x, const int y, std::shared_ptr<Exon> pred, const bool process ) {
   seed->flags |= ReadContainer::PROCESSED;
   auto chr = addChromosome(g, seed->chromosome); // pick or create
   chr->addExon(seed->fivePrimeEnd, seed->threePrimeEnd);
@@ -27,7 +27,7 @@ void LinearPlot::fromRead ( std::shared_ptr<ReadContainer> seed, Genome* g, cons
   int x2 = x + len / 2;
   std::shared_ptr<Exon> exon(new Exon({x1, x2, y, nextID, seed->chromosome}));
   if (pred != nullptr) {  // not the initial seed
-    LineEnds le = {exon, pred};                // parent line positions with exons
+    LineEnds le = {exon, pred, -1};                // parent line positions with exons
     connections.push_back(le);
   }
   positions.push_back(exon);

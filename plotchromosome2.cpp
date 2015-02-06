@@ -45,6 +45,10 @@ std::shared_ptr<Rect> PlotChromosome::boundingRect() {
 void PlotChromosome::writeEps ( std::ostream& out, const Rect dim, const int dx, const int dy, const float scale, const float col[3] ) const {
   int cy = dim.y + 1.5 * dy;
 
+  // Chromosome name
+  out << dx << " " << cy - 0.25 * dy << " moveto\n";
+  out << "(" << name << ") show\n";
+
   // Background line
   out << "\n" << len*scale << " " // w
       << 2*dx << " " // x

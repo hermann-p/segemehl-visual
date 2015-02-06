@@ -36,6 +36,9 @@ std::shared_ptr<Rect> vPlot::writeEpsHeader ( std::ostream& out, const int dx, c
   br->w -= 2*dx;
   br->h -= 2*dy;
 
+  // setup font
+  out << "/Helvetica findfont\n" << dy * 0.5 << " scalefont\n0 setgray\nsetfont\n\n";
+
   float chr_x_scale = (br->w - 2*dx) * 1.0 / longest; // scale chromosomes to fit to plot
 
   // ps-functions to save file size
@@ -56,9 +59,10 @@ std::shared_ptr<Rect> vPlot::writeEpsHeader ( std::ostream& out, const int dx, c
   out << " 0 dY neg rlineto\n closepath\n gsave\n";
   out << " setrgbcolor fill\n % r g b\n";
   out << " grestore \n 0 setgray\n stroke \n} def\n\n";
-  // write chromosomes 
+  // write chromosomes
+  int chrColId(0);                // pick colors from palette
   for (auto& chr : chromosomes) { // write to file and adjust free space
-    chr.second->writeEps(out, *br, dx, dy, chr_x_scale, PALETTE[chr.first]);
+    chr.second->writeEps(out, *br, dx, dy, chr_x_scale, PALETTE[chrColId++]);
     //    auto h = chr.second->boundingRect()->h + dy;
     int h = dy;
     br->y += h;
