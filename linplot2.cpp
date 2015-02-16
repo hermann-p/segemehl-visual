@@ -2,12 +2,14 @@
 #include "readcontainer.h"
 
 #include <fstream>
+#include <math.h>
 
 LinearPlot::LinearPlot ( int dx, int dy ) 
   : vPlot(),
     dx(dx), dy(dy),
     minx(0), maxx(0), miny(0), maxy(0),
-    nextID('a')
+    nextID('a'),
+    nFilter(0)
 {
 }
 
@@ -18,17 +20,16 @@ void LinearPlot::fromRead ( std::shared_ptr<ReadContainer> seed, Genome* genome 
   }
 }
 
-void LinearPlot::fromRead ( std::shared_ptr<ReadContainer> seed, Genome* g, const int x, const int y, std::shared_ptr<Exon> pred, const bool process ) {
-  seed->flags |= ReadContainer::PROCESSED;
-  auto chr = addChromosome(g, seed->chromosome); // pick or create
-  chr->addExon(seed->fivePrimeEnd, seed->threePrimeEnd);
+void LinearPlot::fromRead ( std::shared_ptr<ReadContainer> seed, Genome* g, const int x, const int y, std::shared_ptr<Exon> pred, const int nLinks ) {
   int len = seed->length();
   int x1 = x - len / 2;
   int x2 = x + len / 2;
   std::shared_ptr<Exon> exon(new Exon({x1, x2, y, nextID, seed->chromosome}));
-  if (pred != nullptr) {  // not the initial seed
-    LineEnds le = {exon, pred, -1};                // parent line positions with exons
+  if (pred != nullptr && nLinks >= nFilter) {  // not the initial seed
+    LineEnds le = {exon, pred, nLinks};                // parent line positions with exons
     connections.push_back(le);
+    auto chr = addChromosome(g, seed->chromosome); // pick or create
+    chr->addExon(seed->fivePrimeEnd, seed->threePrimeEnd);
   }
   positions.push_back(exon);
   nextID = (++nextID <= 'z') ? nextID : 'A'; // count up and check if in range
@@ -41,21 +42,24 @@ void LinearPlot::fromRead ( std::shared_ptr<ReadContainer> seed, Genome* g, cons
     for (auto& ex : *(seed->fivePrimeRead)) {
       if (!(ex->flags & ReadContainer::PROCESSED)) {
 	int x1 =   x - dx - (len + ex->length()) / 2;
-	fromRead(ex, g, x1, y0, exon);
+	fromRead(ex, g, x1, y0, nullptr);
       }
       y0 += dy;
     }
   }
+
+  seed->flags |= ReadContainer::PROCESSED;
 
   if (seed->threePrimeRead != nullptr) {     // process successors
     int y0 = y - (seed->threePrimeRead->size() / 2) * dy;
     if (seed->threePrimeRead->size() % 2 == 0) {
       y0 += dy/2;
     }
-    for (auto& ex : *(seed->threePrimeRead)) {
+    for (int i(0); i < seed->threePrimeRead->size(); ++i) {
+      auto ex = seed->threePrimeRead->at(i);
       if (!(ex->flags & ReadContainer::PROCESSED)) {
-	int x1 =   x + dx + (len + ex->length()) / 2;
-	fromRead(ex, g, x1, y0, exon);
+	int x1 = x + dx + (len + ex->length()) / 2;
+	fromRead(ex, g, x1, y0, exon, seed->threePrimeRefs->at(i));
       }
       y0 += dy;
     }
@@ -113,7 +117,13 @@ void LinearPlot::writeEps ( const std::string& fileName ) const {
       y0 += conn.b->y;
       y1 += conn.a->y;
     }
-    out << x0 << " " << y0 << " " << x1 << " " << y1 << " conn\n";
+    float dx = x1 - x0;
+    float dy = y1 - y0;
+    float dydx = dy/dx;
+    float L = sqrt(dx*dx + dy*dy);
+    float cy = y0 + 0.5 * L * dydx - 0.15 * dy;
+    out << "(" << conn.num << ") " << x0 + dx/2 << " " << cy << " "; // information for label
+    out << x0 << " " << y0 << " " << x1 << " " << y1 << " conn\n";   // information for line
   }
 
   // draw treeplot

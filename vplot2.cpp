@@ -44,10 +44,28 @@ std::shared_ptr<Rect> vPlot::writeEpsHeader ( std::ostream& out, const int dx, c
   // ps-functions to save file size
 
   // line from x y straight right by w
-  out << "/cL { %w x y\n newpath\n 0 setgray\n moveto\n 0 rlineto\n 1 setlinewidth\n stroke\n} def\n\n";
+  out << "/cL { %w x y\n";
+  out << " newpath\n";
+  out << " 0 setgray\n";
+  out << " moveto\n";
+  out << " 0 rlineto\n";
+  out << " 1 setlinewidth\n";
+  out << " stroke\n";
+  out << "} def\n\n";
 
   // line from x0 y0 to x1 y1
-  out << "/conn {\n newpath\n moveto\n lineto\n 0 setgray\n stroke\n} def\n\n";
+  out << "/conn {\n";
+  out << " newpath\n";
+  out << " moveto\n";
+  out << " lineto\n";
+  out << " 0 setgray\n";
+  out << " stroke\n";
+  out << " /Helvetica findfont\n ";
+  out << dy * 0.3 << " scalefont\n";
+  out << " 1 0 0 setrgbcolor setfont\n";
+  out << " moveto\n";
+  out << " show\n";
+  out << "}def\n\n";
 
   // draw exon of color r g b with width w on position x y
   out << "/dY " << dy*0.4 << " def\n\n";
