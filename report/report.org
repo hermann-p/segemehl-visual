@@ -9,7 +9,7 @@
 #+LATEX_HEADER: \usepackage[usenames,dvipsnames]{xcolor}
 #+LATEX_HEADER: \hypersetup{colorlinks=true, citecolor=Blue, linkcolor=Black, urlcolor=Blue}
 
-#+OPTIONS: toc:t
+#+OPTIONS: toc:nil
 
 #+BEGIN_ABSTRACT
 The abstract is abstract
@@ -122,7 +122,13 @@ splicings resemble edges.
 Each node stores the length in base pairs and the chromosome of origin of the split it 
 represents, as well as edges resembling detected 3' and 5' splice events.
 The chromosomes are represented as ordered maps, which map 3' and 5' positions to the respective
-nodes.
+nodes (compare fig. \ref{fig-datastructure}).
+
+
+#+CAPTION: /chipboard/'s internal datastructure
+#+LABEL: fig-datastructure
+#+ATTR_LATEX: :float wrap
+[[./datatype.png]]
 
 
 *** Reassembling the original RNA sequences
@@ -181,7 +187,9 @@ a full copy of each graph would have to be updated every time another read adds 
 Thus only one node of the interesting graph is saved and expanded with a breadth-first traversal
 of its linking edges, as seen in algorithm \ref{alg:bfs}.
 Note that this approach evaluates the full subgraph of nodes connected to the seed, which may
-also contain nodes that share no primary connection to it (compare fig. \ref{fig:subgraphs}).
+also contain nodes that share no primary connection to it, e. g. are an isoform of an exon that
+exists only in some isoforms of the queried graph, but never occur in combination with the query
+seed.
 There is no immediate drawing done, the method generates coordinates which can then be handled
 or modified by the drawing backend.
 
@@ -264,6 +272,54 @@ evaluating the graph.
 ** Image export
 
 At the moment, only the export of programmatically generated Adobe Encapsulated PostScript (/.eps/)
+is supported. However, the reconstructed and filtered graphs can be exportet to /GraphML/ format
+for visualisation with 3rd party software.
+
+
+* Results
+
+
+** Test cases
+\label{txt:test}
+
+To create test cases, I used a custom /python/ script which simulates chromosome data through
+randomly drawing from the nucleid base letters $[A,C,G,T]$ and writing them into a /.fasta/ file.
+From these simulated chromosomes, I copy-pasted segments into another /.fasta/ file to simulate
+sequencer reads. Then I used /segemehl/ to remap the simulated reads to the simulated chromosomes.
+This allowed me to know the desired results and quickly spot errors during development.
+
+When I allowed /segemehl/ to split input reads and map the fragments to different chromosomes 
+(multistrand reads), it found the origins of all fragments correctly. However, when read length
+exceeded 120 bases, /segemehl/ often crashed with memory access errors.
+
+Visualisation of output files with /chipboard/ worked well with multistrand RNAs that have only 
+a small number of isoforms (see fig. \ref{fig-tree}).
+More complicated transcripts will result in skewed output, however, as nodes farther down in the
+tree may have multiple 5'links themselves, thus changing their respective y coordinate offset in
+ways that collide with sibling nodes' positions.
+
+#+CAPTION: Tree plot
+#+LABEL: fig-tree
+#+ATTR_LATEX: :float wrap
+#+ATTR_LATEX: :caption \caption[Multistrand treeplot]{Treeplot of a RNA that contains a multistrand and a non-numltistrand isoform generated from test data.}\label{fig-tree}
+[[./tree.png]]
+
+
+** Real world data
+\label{txt:data}
+
+To test /chipboard/ on real world data, I successfully ran it on 41 - 69GB files from 
+\cite{skinpaper}, where it detected millions of multistrand RNAs per file. Sampling of generated
+output files showed that detected strand-switching events tend to be short (2-3 exons) and have a
+low link depth (never above 4 in 20 randomly picked output images). Full evaluation of all found
+events was not done.
+
+The available data has been pre-filtered for poly-A reads, so circular transcripts are not 
+contained, as poly-A tails are signalling structures of linear RNA.
+Hence the search for circular transcripts was not enforced.
+
+
+** Performance 
 
 Running on datasets of different size, /chipboard/ showed linear ($O(n)$) runtime.
 On the /rhskl5/ workstation of Universität Regensburg, about 20GB of data could be processed per
@@ -282,8 +338,8 @@ human-readable /.sam/ input files to parse them for data.
 * Discussion
 
 The software /chipboard/ is a tool to visualise NGS sequencing data which has been mapped with
-the /segemehl/ It allows to scan for RNA assembled of exons from different strands of RNA and is
-at the time of writing the only software known to me that automated the visualisation of such 
+the /segemehl/ tool. It allows to scan for RNA assembled of exons from different strands of RNA and is
+at the time of writing the only software known to me that automates the visualisation of such 
 events.
 In addition, it allows the user to select RNA which contains exons from specific chromosome
 positions. With tree-like isoform graphs, it tries to increase visual information content in 
@@ -291,7 +347,7 @@ comparison with more common visualisation approaches.
 
 In its current state, /chipboard/ is stable but not complete. Detection and visualisation of
 circular graphs has been deactivated in the current build, as test cases for that were not 
-created yet. Also, as hinted in \ref{txt:circ2}, circulare RNAs with splice variants can be
+created yet. Also, as hinted in \ref{txt:circ2}, circular RNAs with splice variants can be
 ambiguous. When traversing the graph, the program could get stuck in a non-circular isoform. To
 avoid this, some shortest path search like Djikstra's algorithm must be applied to find a
 complete path from the start-node to the end node.
@@ -303,7 +359,7 @@ methods in favour of hiearachy-based methods like Sugiyama's method.
 Although force-based approaches create graphs which are tendentially more aesthetically
 pleasing, their runtime tends to be far slower (see \cite{hbgraphs}).
 
-The runtime of 1h per 20GB seems quite long, so optimisation is desirable.
+Although the runtime of 1h per 32GB seems quite moderate, some optimisation is still desirable.
 When parsing the /.sam/ input files, it is impossible to predict, which split will be read next,
 and what graph it may belong to. This makes parallellization very hard. Mutexes could be used
 to lock all nodes of a graph for a single process, but this would include traversing up to two
@@ -337,4 +393,4 @@ A development snapshot of the program's source code can be accessed on [[http://
 \listofalgorithms
 
 \bibliography{references}
-\bibliographystyle{natdin}
+\bibliographystyle{plain}
