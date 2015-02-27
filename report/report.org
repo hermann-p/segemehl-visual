@@ -1,6 +1,7 @@
 #+Author: Hermann Pauly
 #+Title: A wrapper for /segemehl/ output
 #+EMail: hermann.pauly@stud.uni-r.de
+#+Date:
 
 #+LATEX_CLASS: article
 
@@ -15,7 +16,7 @@
 #+BEGIN_ABSTRACT
 Alternate splicing is a cellular process that massively increases the amount of transcripts
 encoded in a single gene. Apart from commonly spliced mRNAs from single genes, different splicing
-variants, buth functional and pathological, have been observed. The NGS mapping software
+variants, both functional and pathological, have been observed. The NGS mapping software
 /segemehl/ maps multi strand fusion and circular transcripts, but offers no method to
 visualise them yet. Here I present a software to automatise selective visualisation of 
 /segemehl/ data files. I applied it to sequenced and processed skin cell data and found 
@@ -28,7 +29,7 @@ numerous multi strand fusion transcripts with low abundancies each.
 ** Document tasks
 *** DONE create first outline
 *** DONE create final outline
-*** TODO wording of introduction
+*** DONE wording of introduction
 *** DONE wording of methods
 *** DONE wording of results
 *** DONE wording of discussion
@@ -51,7 +52,7 @@ understanding crucial to genomic research.
 According to Hoffmann et al. \cite{smpaper}, data from NGS sequencing however has shown, that not
 all splice events connect exons from a single gene to a regular mRNA, and not all seemingly
 aberrant splicing needs to be pathologic.
-Splicing can connect both ends of an RNA strand so it forms a *circular RNA*, which may have
+Splicing can connect both ends of an RNA strand so it forms a circular RNA, which may have
 regulatory roles. 
 In some cases and organisms also the fusion of RNA transcribed from different strands of a 
 chromosome or even from different chromosomes could be observed.
@@ -96,9 +97,9 @@ sequencer artifacts (which will not match the genome very well in any place) (co
 deliberately omits searching for known splice sites to be able to find circular RNAs and new 
 kinds of /fusion transcripts/, transcripts that stem from distant loci of different strands of a 
 chromosome, or fusions of RNA transcribed from multiple chromosomes. In this work the latter two
-events are termed *multistrand events*.
+events are termed multistrand events.
 
-I here present the foundation for a software that visualises the output of /segemehl/ mapped
+Here I present the foundation for a software that visualises the output of /segemehl/ mapped
 sequencing data.
 
 
@@ -116,7 +117,7 @@ I chose the following filtering options:
 detection of all multistrand RNAs,
 detection of all circular RNAs,
 and all isoforms containing user-defined chromosome and position pairs.
-Future versions also aim to further refine the search by allowing to filter by *link depth*, that
+Future versions also aim to further refine the search by allowing to filter by link depth, that
 is the number of times a connection of any two splits within transcripts and isoforms occured in 
 the input files.
 The software should abstract the temporary representation, input and output backends, so future 
@@ -170,7 +171,7 @@ split indicate its relative length, compared to the whole ring.
 \label{txt:reassembly}
 
 /Segemehl/ with its /split/ option enabled divides input RNA reads into fragments, maps each 
-of those *split* fragments to the chromosomes and position it fits best and stores them, 
+of those split fragments to the chromosomes and position it fits best and stores them, 
 line-wise and in order, inside the /sam/ file, together with information how it had
 performed the splitting and mapping.
 It thus provides a guideline how to reassemble the input reads.
@@ -193,7 +194,6 @@ to full RNAs, with all their isoforms encountered merged into a single graph.
 
 #+CAPTION: /chipboard/'s internal datastructure
 #+LABEL: fig-datastructure
-#+ATTR_LATEX: :float wrap
 #+ATTR_LATEX: :caption \caption[\textit{chipboard}'s internal datastructure]{\textit{chipboard}'s internal datastructure. Graph nodes resemble split fragmens/exons and edges resemble splicings. Chromosomes are resembled as ordered maps of node-pointers to allow for quick selection.}\label{fig-datastructure}
 [[./datatype.png]]
 
@@ -226,7 +226,7 @@ relatively long runtime.
 One of the key features of /segemehl/ is the mapping of read fragments to different chromosomal
 strands of origin. To detect such multistrand chromosomes on user request, the information from
 \ref{txt:reassembly} is applied straightforward: if a split's successor is on a different
-chromosome, the respective split is added to a list of multistrand *seeds*, which can be expanded
+chromosome, the respective split is added to a list of multistrand seeds, which can be expanded
 to a full isoform tree (see \ref{txt:tree1}) for plotting on the available backends.
 
 
@@ -388,11 +388,18 @@ Hence the search for circular transcripts was not enforced.
 #+CAPTION: Tree plot
 #+LABEL: fig-tree2
 #+ATTR_LATEX: :width 0.5\textwidth
+#+ATTR_LATEX: :float wrap
 #+ATTR_LATEX: :caption \caption[Multistrand tree plot of real data]{Treeplot of a multistrand split event found in real dataset. Short RNA consisting of a 100-base fragment from chromosome 19 and one 24-base fragment from chromosome 12, found twice in the dataset.}\label{fig-tree2}
 [[./real.eps]]
 
 
 ** Performance 
+
+#+CAPTION: Runtime comparison
+#+LABEL: fig:times
+#+ATTR_LATEX: :caption \caption[Runtime comparison]{Runtime comparison on \textit{rhskl5} workstation. Runtime increases in linear fashion with data size, while optimised code runs 1/3 faster. Times were taken for 57 MiB, 41 GiB and 69 GiB files.}\label{fig:times}
+[[./times.png]]
+
 
 Running on datasets of different size, /chipboard/ showed linear ($O(n)$) runtime.
 On the /rhskl5/ workstation of Universität Regensburg, about 20GB of data could be processed per
@@ -401,12 +408,8 @@ performance to 32 GB/h (see fig \ref{fig:times}).
 Profiling showed, that 50% of the runtime is spent tokenizing text strings from the
 human-readable /.sam/ input files to parse them for data.
 
-#+CAPTION: Runtime comparison org
-#+LABEL: fig:times
-#+ATTR_LATEX: :caption \caption[Runtime comparison]{Runtime comparison on \textit{rhskl5} workstation. Runtime increases in linear fashion with data size, while optimised code runs 1/3 faster. Times were taken for 57 MiB, 41 GiB and 69 GiB files.}\label{fig:times}
-#+ATTR_LATEX: :float wrap :placement t
-[[./times.png]]
 
+\clearpage
 
 * Discussion
 
@@ -462,10 +465,13 @@ possible findings  is far from being representative.
 
 A development snapshot of the program's source code can be accessed on [[http://www.github.com/hermann-p/segemehl-visual][my github page]].
 
+\clearpage
 
 \listoffigures
 
 \listofalgorithms
+
+\clearpage
 
 \bibliography{references}
 \bibliographystyle{alphadin}
