@@ -32,15 +32,35 @@ And I did it well!
 ** Programming tasks
 *** TODO follow roadmap
 
+
 * Introduction
 
-** Splicing and isoforms
+Alternate splicing is a cellular process that massively increases the amount of different RNA
+and proteins available to organism without the need to store more genetic information. 
+The variability is achieved by cutting gene transcripts at defined splice-sites and fusing
+desired parts to different functional mRNAs.
+Next to gene silencing and methylation, alternate splicing is another mechanism that allows 
+cells to differentiate.
+On the other hand, erroneous splicing events can cause various diseases, thus making their
+understanding crucial to genomic research.
+
+According to Hoffmann et al. \cite{smpaper}, data from NGS sequencing however has shown, that not
+all splice events connect exons from a single gene to a regular mRNA, and not all seemingly
+aberrant splicing need to be pathologic.
+Splicing can connect both ends of an RNA strand so it forms a *circular RNA*, which may have
+regulatory roles. 
+In some cases and organisms also the fusion of RNA transcribed from different strands of a 
+chromosome or even from different chromosomes could be observed.
+
+To analyse genomic data, in the past, we were limited to low-throughput sequencing methods like
+Sanger sequencing.
+However, the next generation sequencing (NGS) methods of nowadays enable us to obtain near 
+complete quantitative and qualitative genomic snapshots of cell states in a single go with very 
+high accuracy.
 
 
 
-** Detection algorithms
-- segemehl
-  
+
 * The program
 
 My goal was to create software that is able to create visualisation plots for RNA mappings 
@@ -301,7 +321,7 @@ ways that collide with sibling nodes' positions.
 #+CAPTION: Tree plot
 #+LABEL: fig-tree
 #+ATTR_LATEX: :float wrap
-#+ATTR_LATEX: :caption \caption[Multistrand treeplot]{Treeplot of a RNA that contains a multistrand and a non-numltistrand isoform generated from test data.}\label{fig-tree}
+#+ATTR_LATEX: :caption \caption[Multistrand treeplot]{Treeplot of a RNA that contains a multistrand and a non-multistrand isoform generated from test data.}\label{fig-tree}
 [[./tree.png]]
 
 
@@ -346,8 +366,8 @@ positions. With tree-like isoform graphs, it tries to increase visual informatio
 comparison with more common visualisation approaches.
 
 In its current state, /chipboard/ is stable but not complete. Detection and visualisation of
-circular graphs has been deactivated in the current build, as test cases for that were not 
-created yet. Also, as hinted in \ref{txt:circ2}, circular RNAs with splice variants can be
+circular graphs has been deactivated in the current build, as it is only rudimetary and not
+yet thoroughly tested. Also, as hinted in \ref{txt:circ2}, circular RNAs with splice variants can be
 ambiguous. When traversing the graph, the program could get stuck in a non-circular isoform. To
 avoid this, some shortest path search like Djikstra's algorithm must be applied to find a
 complete path from the start-node to the end node.
