@@ -215,9 +215,9 @@ bool Genome::parseDataLine ( const std::string& line ) {
       rc->flags |= flags;
     }
     
-//    if (hasNext) {
-//      rc->addDownstreamRead(*this, nextChr, nextPos);
-//    }
+    if (hasNext) {
+      rc->addDownstreamRead(*this, nextChr, nextPos);
+    }
     if (hasPrev) {
       rc->addUpstreamRead(*this, prevChr, -prevPos);
     }

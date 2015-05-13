@@ -77,6 +77,7 @@ std::shared_ptr<Rect> vPlot::writeEpsHeader ( std::ostream& out, const int dx, c
   out << " 0 dY neg rlineto\n closepath\n gsave\n";
   out << " setrgbcolor fill\n % r g b\n";
   out << " grestore \n 0 setgray\n stroke \n} def\n\n";
+
   // write chromosomes
   int chrColId(0);                // pick colors from palette
   for (auto& chr : chromosomes) { // write to file and adjust free space

@@ -30,7 +30,6 @@ class LinearPlot : public vPlot {
   void writeEps ( const std::string& fileName ) const;
 
  private:
-  void fromRead ( std::shared_ptr<ReadContainer>, Genome*, const int x, const int y, std::shared_ptr<Exon> pred, const int nLinks = -1 );
   std::vector<LineEnds> connections;
   std::vector< std::shared_ptr<Exon> > positions; // [lt, rt, y]
   std::shared_ptr<Rect> boundingRect() const;

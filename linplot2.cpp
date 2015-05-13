@@ -3,6 +3,7 @@
 
 #include <fstream>
 #include <math.h>
+#include <queue>
 
 LinearPlot::LinearPlot ( int dx, int dy ) 
   : vPlot(),
@@ -13,56 +14,82 @@ LinearPlot::LinearPlot ( int dx, int dy )
 {
 }
 
+
 void LinearPlot::fromRead ( std::shared_ptr<ReadContainer> seed, Genome* genome ) {
-  fromRead(seed, genome,  0, 300, nullptr);
+  class ClosureCnt { // Container to keep a read and its on-screen positions together
+  public:
+    int xpos;
+    float ypos;
+    std::shared_ptr<ReadContainer> data;
+    std::shared_ptr<Exon> exon;
+    ClosureCnt(LinearPlot* parent, std::shared_ptr<ReadContainer> d, int x, int y) :
+      data(d),
+      xpos(x),
+      ypos(y),
+      exon(new Exon({xpos - data->length()/2, xpos + data->length()/2, y, 0, data->chromosome}))
+    {
+      parent->positions.push_back(exon);
+      log("-- creating at " + std::to_string(x) + "," + std::to_string(y));
+    }
+  };
+
+  std::queue<ClosureCnt*> q;
+  q.push(new ClosureCnt(this, seed, 0, 0.0f));
+  seed->flags |= ReadContainer::PROCESSED;
+  
+  while (!q.empty()) {
+    auto nodeCnt = q.front();
+    auto node = nodeCnt->data;
+    q.pop();
+
+    auto chr = addChromosome(genome, node->chromosome);
+    chr->addExon(node->threePrimeEnd, node->fivePrimeEnd);
+
+    int xThis = nodeCnt->xpos;
+    int yThis = nodeCnt->ypos;
+    int rt = xThis + node->length() / 2;
+    int lt = xThis - node->length() / 2;
+    
+    if (node->fivePrimeRead != nullptr) {
+      int nPreds = node->fivePrimeRead->size();
+      float y0 = -nPreds / 2;
+      y0 = (nPreds % 2 == 0) ? y0 + 0.5 : y0;
+      for (auto pred : *(node->fivePrimeRead)) {
+	if (!(pred->flags & ReadContainer::PROCESSED)) {
+	  int nThis = pred->findLink(node);
+	  log("--> linknum: " + std::to_string(nThis) +
+	      " of " + std::to_string(nPreds) );
+	  q.push(new ClosureCnt(this, pred, lt - dx - pred->length()/2, yThis + (y0 + nThis) * dy));
+	  pred->flags |= ReadContainer::PROCESSED;
+	}
+      }
+    }
+
+    if (node->threePrimeRead != nullptr) {
+      int nSuccs = node->threePrimeRead->size();
+      float  y = -nSuccs / 2;
+      y = (nSuccs % 2 == 0) ? y + 0.5 : y;
+      y *= dy;
+      for (int i(0); i < nSuccs; ++i) {
+	log("--> working on succ #" + std::to_string(i) +
+	    " of " + std::to_string(nSuccs) );
+	auto succ = node->threePrimeRead->at(i);
+	int succX = rt + dx + succ->length() / 2;
+	if (!(succ->flags & ReadContainer::PROCESSED)) {
+	  ClosureCnt* succCnt = new ClosureCnt(this, succ, succX, yThis + y);
+	  q.push(succCnt);
+	  succ->flags |= ReadContainer::PROCESSED;
+	}
+	std::shared_ptr<Exon> lineEnd( new Exon({succX - succ->length()/2, succX + succ->length()/2, (int)(yThis + y), 0, succ->chromosome}) );
+	LineEnds connectionLine = {nodeCnt->exon, lineEnd, node->threePrimeRefs->at(i)};
+	connections.push_back(connectionLine);
+	y += dy;
+      }
+    }
+  }
+
   for (auto& chr : chromosomes) {
     chr.second->printout();
-  }
-}
-
-void LinearPlot::fromRead ( std::shared_ptr<ReadContainer> seed, Genome* g, const int x, const int y, std::shared_ptr<Exon> pred, const int nLinks ) {
-  int len = seed->length();
-  int x1 = x - len / 2;
-  int x2 = x + len / 2;
-  std::shared_ptr<Exon> exon(new Exon({x1, x2, y, nextID, seed->chromosome}));
-  if (pred != nullptr && nLinks >= nFilter) {  // not the initial seed
-    LineEnds le = {exon, pred, nLinks};                // parent line positions with exons
-    connections.push_back(le);
-    auto chr = addChromosome(g, seed->chromosome); // pick or create
-    chr->addExon(seed->fivePrimeEnd, seed->threePrimeEnd);
-  }
-  positions.push_back(exon);
-  nextID = (++nextID <= 'z') ? nextID : 'A'; // count up and check if in range
-
-  if (seed->fivePrimeRead != nullptr) {      // process predecessors
-    int y0 = y - (seed->fivePrimeRead->size() / 2) * dy;
-    if (seed->fivePrimeRead->size() % 2 == 0) {
-      y0 += dy/2;
-    }
-    for (auto& ex : *(seed->fivePrimeRead)) {
-      if (!(ex->flags & ReadContainer::PROCESSED)) {
-	int x1 =   x - dx - (len + ex->length()) / 2;
-	fromRead(ex, g, x1, y0, nullptr);
-      }
-      y0 += dy;
-    }
-  }
-
-  seed->flags |= ReadContainer::PROCESSED;
-
-  if (seed->threePrimeRead != nullptr) {     // process successors
-    int y0 = y - (seed->threePrimeRead->size() / 2) * dy;
-    if (seed->threePrimeRead->size() % 2 == 0) {
-      y0 += dy/2;
-    }
-    for (int i(0); i < seed->threePrimeRead->size(); ++i) {
-      auto ex = seed->threePrimeRead->at(i);
-      if (!(ex->flags & ReadContainer::PROCESSED)) {
-	int x1 = x + dx + (len + ex->length()) / 2;
-	fromRead(ex, g, x1, y0, exon, seed->threePrimeRefs->at(i));
-      }
-      y0 += dy;
-    }
   }
 }
 
@@ -95,10 +122,19 @@ void LinearPlot::writeEps ( const std::string& fileName ) const {
 
   // file header + draw used chromosomes
   auto rect = writeEpsHeader(out, dx, dy);
+  auto innerRect = boundingRect();
 
-  int xOffs(-rect->x);
-  int yOffs(-(chromosomes.size() + 1) * dy);
-  
+  log("-- obounds: " + std::to_string(rect->x) + "/" + std::to_string(rect->y) + ", " +
+      std::to_string(rect->w) + "x" + std::to_string(rect->h) );
+
+  log("-- ibounds: " + std::to_string(innerRect->x) + "/" + std::to_string(innerRect->y) + ", " +
+      std::to_string(innerRect->w) + "x" + std::to_string(innerRect->h) );
+
+  int xOffs(-innerRect->x);
+  int yOffs((chromosomes.size() + 1) * dy - innerRect->y);
+
+  log("-- offsets: " + std::to_string(xOffs) + "/" + std::to_string(yOffs) );
+
   // draw connection lines
   for (auto& conn : connections) {
     int x0(xOffs);
@@ -111,7 +147,7 @@ void LinearPlot::writeEps ( const std::string& fileName ) const {
       y0 += conn.a->y;
       y1 += conn.b->y;
     }
-    else {
+    else {   // a right of b, should not happen anymore
       x0 += conn.b->rt;
       x1 += conn.a->lt;
       y0 += conn.b->y;
@@ -123,17 +159,18 @@ void LinearPlot::writeEps ( const std::string& fileName ) const {
     float L = sqrt(dx*dx + dy*dy);
     float cy = y0 + 0.5 * L * dydx - 0.15 * dy;
     out << "(" << conn.num << ") " << x0 + dx/2 << " " << cy << " "; // information for label
-    out << x0 << " " << y0 << " " << x1 << " " << y1 << " conn\n";   // information for line
+    out << x1 << " " << y1 << " " << x0 << " " << y0 << " conn\n";   // information for line
   }
 
   // draw treeplot
   for (auto& exon : positions) {
     auto color = PALETTE[exon->chr];
+    int width = exon->rt - exon->lt;
+    int xPos = exon->lt + xOffs;
+    int yPos = exon->y + yOffs;
     out << color[0] << " " << color[1] << " " << color[2] << " "; // define current color
-    out << exon->rt - exon->lt << " " << exon->lt + xOffs << " " << exon->y + yOffs << " exon\n";
+    out << width << " " << xPos << " " << yPos << " exon\n";
   }
-
-  // don't forget text where appropriate
 
   out << "%%EOF";
   out.flush();

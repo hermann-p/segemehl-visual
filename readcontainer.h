@@ -37,8 +37,8 @@ public:
     PROCESSED = 128
   } FLAGS;
 
-private:  
-  int findLink( std::shared_ptr<ReadContainer> partner, const bool fwd = true );
+  void *moreData;
+  int findLink( std::shared_ptr<ReadContainer> partner, const bool downstream = true );
 };
 
 bool operator == ( const ReadContainer& a, const ReadContainer& b );

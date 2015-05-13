@@ -50,7 +50,7 @@ void PlotChromosome::writeEps ( std::ostream& out, const Rect dim, const int dx,
   out << "(" << name << ") show\n";
 
   // Background line
-  out << "\n" << len*scale << " " // w
+  out << len*scale << " " // w
       << 2*dx << " " // x
       << cy << " cL\n"; // y
 
@@ -61,4 +61,5 @@ void PlotChromosome::writeEps ( std::ostream& out, const Rect dim, const int dx,
 	 << 2*dx + scale * exon.first << " "   // x
 	 << cy - 0.25 * dy << " exon\n";
   }
+  out << std::endl;
 }

@@ -32,12 +32,9 @@ void ReadContainer::addDownstreamRead ( const Genome& genome, const chr_num_t ch
   auto dnstr = genome.getReadAt(chr, pos);
   if (dnstr != nullptr) {
     // check if this is a multistrand splice junction
-    if (genome.multistrand != nullptr &&
-	(dnstr->chromosome != chromosome || dnstr->flags & MULTISTRAND == MULTISTRAND)) {
-      dnstr->flags |= MULTISTRAND;
+    if (dnstr->chromosome != chromosome && !(dnstr->flags & MULTISTRAND) ) {
       flags |= MULTISTRAND;
-      genome.multistrand->insert(shared_from_this());
-      genome.multistrand->insert(dnstr);
+      genome.multistrand->insert(shared_from_this());    // adding one multistrand seed suffices
     }
 
     int link = findLink(dnstr); // search link this => dnstr
@@ -114,7 +111,8 @@ ReadContainer::ReadContainer ( )
 : threePrimeRead(nullptr),
   fivePrimeRead(nullptr),
   threePrimeRefs(nullptr),
-  flags(0)
+  flags(0),
+  moreData(NULL)
 {
 }
 

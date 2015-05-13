@@ -29,4 +29,3 @@ class PlotChromosome {
 };		  
 
 #endif // PLOTCHROMOSOME_H
-
