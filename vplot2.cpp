@@ -1,7 +1,17 @@
 #include "vplot2.h"
 #include "utils.h"
+#include "readcontainer.h"
 
-vPlot::vPlot() {
+vPlot::vPlot()
+{
+}
+
+int vPlot::exonCount () {
+  int n = 0;
+  for (auto& chr : chromosomes) {
+    n += chr.second->nExons();
+  }
+  return n;
 }
 
 PlotChromosome* vPlot::addChromosome ( const Genome* genome, const chr_num_t id ) {
@@ -90,4 +100,20 @@ std::shared_ptr<Rect> vPlot::writeEpsHeader ( std::ostream& out, const int dx, c
   br->h += dy;
 
   return br;
+}
+
+
+void vPlot::connectExons ( std::shared_ptr<ReadContainer> lt, std::shared_ptr<ReadContainer> rt ) {
+  assume(lt != nullptr, "Left exon doesn't exist");
+  assume(rt != nullptr, "Right exon doesn't exist");
+  std::cout << "---- connecting " << *lt << " to " << *rt << std::endl;
+  if (!lt->threePrimeRead) {
+    lt->threePrimeRead = new link_list_t;
+  }
+  if (!rt->fivePrimeRead) {
+    rt->fivePrimeRead = new link_list_t;
+  }
+
+  lt->threePrimeRead->push_back(rt);
+  rt->fivePrimeRead->push_back(lt);
 }

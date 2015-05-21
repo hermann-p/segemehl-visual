@@ -13,10 +13,14 @@ include_directories(${QT_INCLUDES} ${CMAKE_CURRENT_BINARY_DIR})
 
 set(shared_sources genome.cpp readcontainer.cpp utils.cpp plotchromosome2.cpp vplot2.cpp linplot2.cpp)
 
-set(CMAKE_CXX_FLAGS "-std=c++11 -g -fpermissive")
+set(CMAKE_CXX_FLAGS "-std=c++11 -g -lm -fpermissive")
 
 #qt4_automoc(${shared_sources})
 add_library(shared_objects ${shared_sources})
+add_custom_command(TARGET shared_objects
+                   POST_BUILD
+		   COMMAND cp ../eps-header .
+		   )
 
 #add_executable(chipboard main.cpp)
 #target_link_libraries(chipboard ${QT_QTCORE_LIBRARY} ${QT_QTGUI_LIBRARY} shared_objects)

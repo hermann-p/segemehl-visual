@@ -9,8 +9,22 @@
 #include <unordered_map>
 #include <memory>
 
+
+// additional data required to construct visible plot elements and
+// arrange them in the output
+struct PlotInfo {
+  uint id;
+  int layer; // only for linear plots
+  // coordinates      linear | circular
+  float c1;        // left   | start angle  
+  float c2;        // y      | distance
+  float c3;        // right  | end angle
+};
+
+
 class ReadContainer : public std::enable_shared_from_this<ReadContainer> {
 public:
+  // create empty container
   ReadContainer ();
   ReadContainer( const chr_num_t chromosome, const chr_pos_t p5, const short len );
   ~ReadContainer();
@@ -34,10 +48,11 @@ public:
     CIRCULAR = 2,
     SPLIT = 4,
     MULTISTRAND = 8,
+    DUMMY = 64,
     PROCESSED = 128
   } FLAGS;
 
-  void *moreData;
+  PlotInfo* moreData;
   int findLink( std::shared_ptr<ReadContainer> partner, const bool downstream = true );
 };
 

@@ -1,4 +1,5 @@
 #include "plotchromosome2.h"
+#include "readcontainer.h"
 #include "vplot2.h"
 #include "utils.h"
 
@@ -12,18 +13,33 @@ PlotChromosome::PlotChromosome ( const size_t N, const chr_pos_t L, const std::s
 }
 
 
-void PlotChromosome::addExon ( chr_pos_t p1, chr_pos_t p2 ) {
-  if (p1 > p2) { // sort for display
-    auto tmp = p1;
-    p1 = p2;
-    p2 = tmp;
-  }
+int PlotChromosome::nExons () const {
+  return exons.size();
+}
 
-  auto lookup = exons.find(p1);
-  if (lookup != exons.end()) { // already exists
-    return;
+
+void PlotChromosome::addExon ( const std::shared_ptr<ReadContainer> exon, int layer ) {
+
+  auto p1 = exon->fivePrimeEnd;
+  if (exons.find(p1) == exons.end()) { // already existss
+    exons.emplace(p1, exon);
   }
-  exons.emplace(p1, p2);
+  if (!exon->moreData) {
+    exon->moreData = new PlotInfo;
+    ((PlotInfo*)exon->moreData)->layer = layer;
+  }
+  else {
+  }
+}
+
+
+// number all displayed fragments in order of position
+void PlotChromosome::assignIds() {
+  uint id(0);
+  for (auto &exon_it : exons) {
+    PlotInfo* pi = (PlotInfo*)(exon_it.second->moreData);
+    pi->id = id++;
+  }
 }
 
 
@@ -42,7 +58,8 @@ std::shared_ptr<Rect> PlotChromosome::boundingRect() {
 }
 
 
-void PlotChromosome::writeEps ( std::ostream& out, const Rect dim, const int dx, const int dy, const float scale, const float col[3] ) const {
+void PlotChromosome::writeEps ( std::ostream& out, const Rect dim, const int dx, const int dy, const float scale, const float col[3] ) {
+  assignIds();
   int cy = dim.y + 1.5 * dy;
 
   // Chromosome name
@@ -57,7 +74,7 @@ void PlotChromosome::writeEps ( std::ostream& out, const Rect dim, const int dx,
   // Rectangle for exons
   for (auto& exon : exons) {
     out << col[0] << " " << col[1] << " " << col[2] << " "  // r g b
-	 << (exon.second-exon.first) * scale << " " // w
+	 << (exon.second->threePrimeEnd-exon.first) * scale << " " // w
 	 << 2*dx + scale * exon.first << " "   // x
 	 << cy - 0.25 * dy << " exon\n";
   }

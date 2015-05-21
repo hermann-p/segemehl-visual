@@ -1,6 +1,16 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#define DEBUG
+
+#ifdef DEBUG
+#define error(condition, text) {if(condition) std::cout << "Error: " << text << std::endl;}
+#define debug(text) {std::cout << "Info: " << text << std::endl;}
+#else
+#define error(condition, text) ;
+#define debug(text) ;
+#endif
+
 #include <string>
 #include <vector>
 

@@ -14,6 +14,7 @@ ReadContainer::~ReadContainer() {
   if (threePrimeRead != nullptr) delete threePrimeRead;
   if (threePrimeRefs != nullptr) delete threePrimeRefs;
   if (fivePrimeRead != nullptr) delete fivePrimeRead;
+  if (moreData != nullptr) delete moreData;
 }
 
 
@@ -112,7 +113,7 @@ ReadContainer::ReadContainer ( )
   fivePrimeRead(nullptr),
   threePrimeRefs(nullptr),
   flags(0),
-  moreData(NULL)
+  moreData(nullptr)
 {
 }
 
@@ -125,7 +126,8 @@ ReadContainer::ReadContainer ( const chr_num_t chromosome, const chr_pos_t p5, c
   threePrimeRead(nullptr),
   fivePrimeRead(nullptr),
   threePrimeRefs(nullptr),
-  flags(0)
+  flags(0),
+  moreData(nullptr)
 {
   if (len < 0) {
     flags |= REVERSE;
@@ -134,8 +136,13 @@ ReadContainer::ReadContainer ( const chr_num_t chromosome, const chr_pos_t p5, c
 
 
 std::ostream& operator << ( std::ostream& output, ReadContainer& rc ) {
-  output << std::to_string(rc.fivePrimeEnd) << "-" <<
-    std::to_string(rc.threePrimeEnd) << " @ " <<
-    std::to_string(rc.chromosome);
+  if (rc.flags & ReadContainer::DUMMY) {
+    output << "dummy read";
+  }
+  else {
+    output << std::to_string(rc.fivePrimeEnd) << "-" <<
+      std::to_string(rc.threePrimeEnd) << " @ " <<
+      std::to_string(rc.chromosome);
+  } 
   return output;
 }

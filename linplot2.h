@@ -6,34 +6,27 @@
 
 #include <memory>
 #include <vector>
+#include <map>
 
-struct Exon {
-  int lt;
-  int rt;
-  int y;
-  char id;
-  chr_num_t chr;
-};
-
-struct LineEnds {
-  std::shared_ptr<Exon> a;
-  std::shared_ptr<Exon> b;
-  int num;
-};
-    
 
 class LinearPlot : public vPlot {
  public:
   LinearPlot(int dx=40, int dy=40);
 
   void fromRead ( std::shared_ptr<ReadContainer> seed, Genome* genome );
-  void writeEps ( const std::string& fileName ) const;
+  void writeEps ( const std::string& fileName );
+  void createPlotCoords ();
 
  private:
-  std::vector<LineEnds> connections;
-  std::vector< std::shared_ptr<Exon> > positions; // [lt, rt, y]
-  std::shared_ptr<Rect> boundingRect() const;
+  void insertDummies ();
+  std::vector<std::vector<bool>> transitiveReduction ();
+  void barycenterCoords ();
   
+  Rect boundingBox;
+  std::map<chr_pos_t, std::vector<std::shared_ptr<ReadContainer>>> layeredGraph;
+  std::vector<std::shared_ptr<ReadContainer>> flatGraph;
+  std::shared_ptr<Rect> boundingRect() const;
+
   int dx, dy;
   int minx, maxx, miny, maxy;
   uint nFilter;
