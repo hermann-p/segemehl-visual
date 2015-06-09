@@ -14,10 +14,10 @@ class vPlot {
   virtual PlotChromosome* addChromosome ( const Genome* genome, const chr_num_t id );
   virtual void fromRead ( std::shared_ptr<ReadContainer> seed, Genome* genom ) = 0;
   virtual void writeEps ( const std::string& fileName ) = 0;
-  virtual std::shared_ptr<Rect> boundingRect () const = 0;
+  virtual std::shared_ptr<Rect> boundingRect () = 0;
   virtual void createPlotCoords () = 0;
 
-  std::shared_ptr<Rect> writeEpsHeader ( std::ostream& out, const int dx, const int dy ) const;
+  std::shared_ptr<Rect> writeEpsHeader ( std::ostream& out, const int dx, const int dy, Rect& contentBounds );
 
   std::map<chr_num_t, PlotChromosome*> chromosomes;
 

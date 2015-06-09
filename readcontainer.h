@@ -17,9 +17,12 @@ struct PlotInfo {
   int layer; // only for linear plots
   // coordinates      linear | circular
   float c1;        // left   | start angle  
-  float c2;        // y      | distance
+  int c2;        // y      | distance
   float c3;        // right  | end angle
 };
+
+
+typedef std::shared_ptr<ReadContainer> p_read_t;
 
 
 class ReadContainer : public std::enable_shared_from_this<ReadContainer> {

@@ -50,7 +50,7 @@ std::string Genome::getChrName ( const chr_num_t num ) const {
 }
 
 short unsigned int Genome::getLength ( const chr_num_t n ) const {
-  assume(n < chrLens.size(), "Genome::getLength: index out of range");
+  //  assume(n < chrLens.size(), "Genome::getLength: index out of range " + std::to_string(n));
   return chrLens.at(n);
 }
 

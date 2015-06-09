@@ -3,32 +3,36 @@
 
 #include "vplot2.h"
 #include "utils.h"
+#include "readcontainer.h"
 
 #include <memory>
 #include <vector>
 #include <map>
+#include <unordered_set>
 
 
 class LinearPlot : public vPlot {
  public:
-  LinearPlot(int dx=40, int dy=40);
+  LinearPlot(int dx=40, int dy=40);    // constructor with plot parameters
 
-  void fromRead ( std::shared_ptr<ReadContainer> seed, Genome* genome );
+  void fromRead ( p_read_t seed, Genome* genome );  // construct tree from seed element
   void writeEps ( const std::string& fileName );
-  void createPlotCoords ();
 
  private:
-  void insertDummies ();
-  std::vector<std::vector<bool>> transitiveReduction ();
-  void barycenterCoords ();
+  void assignLayers ();                // apply longest path algorithm
+  //  void correctDepths ();               // correct layer assignments from multisplits
+  void insertDummies ();               // neccessary for layer-spanning nodes (see Sugiyama)
+  std::vector<std::vector<bool>> transitiveReduction (); // to avoid visual skew by duplicate links
+  void barycenterCoords ();            // heuristic to place nodes nicely
+  void createPlotCoords ();            // transform logical layer/barycenter to plottable x- and y- cordinates
   
-  Rect boundingBox;
-  std::map<chr_pos_t, std::vector<std::shared_ptr<ReadContainer>>> layeredGraph;
-  std::vector<std::shared_ptr<ReadContainer>> flatGraph;
-  std::shared_ptr<Rect> boundingRect() const;
+  std::map<chr_pos_t, std::vector<p_read_t>> layeredGraph;
+  std::vector<p_read_t> flatGraph;
+  std::shared_ptr<Rect> boundingRect();
 
+  Rect br;
   int dx, dy;
-  int minx, maxx, miny, maxy;
+  //  int minx, maxx, miny, maxy;
   uint nFilter;
 
   char nextID;

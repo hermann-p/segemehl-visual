@@ -38,33 +38,33 @@ int main( int argc, char** argv ) {
   set_mode("strsplit", "utils");
   {
     string testIn = "This is a test string";
-    int nExpected = 5;
+    uint nExpected = 5;
     auto result = strsplit(testIn, " ");
     string strExpected[] = {"This", "is", "a", "test", "string"};
     test_assert(result.size() == nExpected, "number of splits", to_string(result.size()) + " tokens instead of " + to_string(nExpected));
-    for (int i(0); i < result.size(); ++i) {
+    for (uint i(0); i < result.size(); ++i) {
       test_assert(strExpected[i] == result.at(i), "value #" + to_string(i), "strsplit: " + result.at(i) + " should be " + strExpected[i]);
     }
   }
   set_mode("strsplit", "utils", "without empty tokens");
   {
     string testIn = "This is  a test      string";
-    int nExpected = 5;
+    uint nExpected = 5;
     auto result = strsplit(testIn, " ", false);
     string strExpected[] = {"This", "is", "a", "test", "string"};
     test_assert(result.size() == nExpected, "number of splits", to_string(result.size()) + " tokens instead of expected " + to_string(nExpected));
-    for (int i(0); i < result.size(); ++i) {
+    for (uint i(0); i < result.size(); ++i) {
       test_assert(strExpected[i] == result.at(i), "value #" + to_string(i), "strsplit: " + result.at(i) + " should be " + strExpected[i]);
     }
   }
   set_mode("strsplit", "utils", "with empty tokens");
   {
     string testIn = "This is   a test  string";
-    int nExpected = 8;
+    uint nExpected = 8;
     auto result = strsplit(testIn, " ", true);
     string strExpected[] = {"This", "is", "", "", "a", "test", "", "string"};
     test_assert(result.size() == nExpected, "number of splits", to_string(result.size()) + " tokens instead of " + to_string(nExpected));
-    for (int i(0); i < result.size(); ++i) {
+    for (uint i(0); i < result.size(); ++i) {
       test_assert(strExpected[i] == result.at(i), "value #" + to_string(i), "strsplit: " + result.at(i) + " should be " + strExpected[i]);
     }
   }

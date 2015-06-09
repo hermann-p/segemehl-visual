@@ -9,23 +9,101 @@
 LinearPlot::LinearPlot ( int dx, int dy ) 
   : vPlot(),
     dx(dx), dy(dy),
-    minx(0), maxx(0), miny(0), maxy(0),
+    //    minx(0), maxx(0), miny(0), maxy(0),
     nextID('a'),
-    nFilter(0)
+    nFilter(0),
+    br( {0,0,0,0} )
 {
 }
 
 
-void LinearPlot::fromRead ( std::shared_ptr<ReadContainer> seed, Genome* genome ) {
+void LinearPlot::fromRead ( p_read_t seed, Genome* genome ) {
+  if (seed->flags & ReadContainer::PROCESSED) {
+    return;
+  } // guardian
+
+  std::queue<p_read_t> q;
+  q.push(seed);
+
+  while (!q.empty()) {
+    auto& node = q.front();
+    q.pop();
+    
+    if (node->flags & ReadContainer::PROCESSED) {
+      continue;
+    } // guardian
+
+    auto chromosome = addChromosome(genome, node->chromosome);
+    chromosome->addExon(node);
+    node->flags |= ReadContainer::PROCESSED;
+    node->moreData = new PlotInfo;
+    node->moreData->id = flatGraph.size();
+    node->moreData->c2 = 0;
+    flatGraph.push_back(node);
+    if (node->threePrimeRead) for (auto& tpr : *node->threePrimeRead) {
+      if (!(tpr->flags & ReadContainer::PROCESSED)) {
+	q.push(tpr);
+      }
+    } // add all three prime linked nodes
+    if (node->fivePrimeRead) for (auto& fpr : *node->fivePrimeRead) {
+      if (!(fpr->flags & ReadContainer::PROCESSED)) {
+	q.push(fpr);
+      }
+    } // add all five prime linked nodes
+  }
+}
+
+
+void LinearPlot::assignLayers () {
+  std::unordered_set<uint> U;  // ids of assigned nodes
+  std::unordered_set<uint> Z;  // ids of nodes assigned below current layer
+  int current(1);
+
+  // lambda to select next unassigned node with all known predecessors below current
+  auto select_next_node = [&]() {
+    for (auto& candidate : flatGraph) {
+      if (U.find(candidate->moreData->id) == U.end()) {
+	if (!candidate->fivePrimeRead) { // no predecessors => all predecessors below current
+	  return candidate;
+	}
+	bool isgood(true);
+	for (auto& pred : *candidate->fivePrimeRead) {
+	  if (Z.find(pred->moreData->id) == Z.end()) { // unknown predecessors > 0
+	    isgood = false;
+	  }
+	}
+	if (isgood) {
+	  return candidate;
+	}
+      }
+    }
+    return (p_read_t)nullptr; // no node found
+  };
+
+  while (U.size() < flatGraph.size()) {
+    p_read_t v = select_next_node();
+    if (v) { // element for this layer found
+      layeredGraph[current].push_back(v);
+      U.insert(v->moreData->id);
+    }
+    else { // no more elements for this layer
+      ++current;
+      Z.insert(U.begin(), U.end());
+    }
+  }
+}
+
+/*
+void fromRead ( p_read_t seed, Genome* genome ) {
   if (seed->flags & ReadContainer::PROCESSED) { // Is already node in a graph
     return;
   }
-  std::queue<std::shared_ptr<ReadContainer>> q;
+  std::queue<p_read_t> q;
   q.push(seed);
   int layer = 0;
 
   // Lambda function to avoid copy-paste for bi-directional traversal
-  auto traverse = [&q,layer](std::vector<std::shared_ptr<ReadContainer>> list, int diff) {
+  auto traverse = [&q,layer](std::vector<p_read_t> list, int diff) {
     for (auto el : list) {
       if (el->flags & ReadContainer::PROCESSED) {
 	continue;
@@ -33,11 +111,12 @@ void LinearPlot::fromRead ( std::shared_ptr<ReadContainer> seed, Genome* genome 
       if (!el->moreData) {
 	el->moreData = new PlotInfo;
 	el->moreData->layer = layer + diff;
+	el->moreData->c2 = 0;
       }
       else {
 	int Lnew = layer + diff;
 	int Lold = el->moreData->layer;
-	bool update = (diff > 1) ? Lnew > Lold : Lnew < Lold; // successors (diff > 1) need to be on higher layers, predecessors on lower ones
+	bool update = (diff > 1) ? (Lnew > Lold) : (Lnew < Lold); // successors (diff > 1) need to be on higher layers, predecessors on lower ones
 	if (update) el->moreData->layer = Lnew;
       }
       q.push(el);
@@ -48,8 +127,12 @@ void LinearPlot::fromRead ( std::shared_ptr<ReadContainer> seed, Genome* genome 
     auto node = q.front();
     q.pop();
 
-    auto chromosome = addChromosome(genome, node->chromosome);
-    chromosome->addExon(node, layer);
+    std::cout << "Working on: " << *node << std::endl;
+
+    if (!(node->flags & ReadContainer::DUMMY)) {
+      auto chromosome = addChromosome(genome, node->chromosome);
+      chromosome->addExon(node, layer);
+    }
     flatGraph.push_back(node);
 
     layer = node->moreData->layer;
@@ -60,7 +143,32 @@ void LinearPlot::fromRead ( std::shared_ptr<ReadContainer> seed, Genome* genome 
     if (node->fivePrimeRead) traverse(*node->fivePrimeRead, -1);
     if (node->threePrimeRead) traverse(*node->threePrimeRead, +1);
   }
-}
+
+  correctDepths();
+} */
+
+
+/*void LinearPlot::correctDepths () {
+  debug("#### CORRECTING LAYER ASSIGNMENTS ####");
+  bool correct(false);
+  do {
+    correct = true;
+    for (auto& layer : layeredGraph) {
+      auto L = layer.first;
+
+      for (int i(0); i < layer.second.size(); ++i) {
+	auto& node = layer.second.at(i);
+	if (node->moreData->layer != L) {
+	  debug( "Found level " + std::to_string(node->moreData->layer) + " node in level " +
+		 std::to_string(L) + ", -> moving");
+	  correct = false;
+	  layeredGraph[node->moreData->layer].push_back(node);
+	  layer.second.erase( layer.second.begin() + i );
+	}
+      }
+    }
+  } while (!correct);
+  }*/
 
 
 void LinearPlot::insertDummies () {
@@ -71,8 +179,8 @@ void LinearPlot::insertDummies () {
 	continue;
       }
       int layer1 = node->moreData->layer;
-      for (auto succ : *(node->threePrimeRead)) { // all successors of node
-	if (succ->flags & ReadContainer::DUMMY) { // skip dummy nodes
+      if (node->threePrimeRead) for (auto succ : *(node->threePrimeRead)) { // all successors of node
+	if (!succ || (succ->flags & ReadContainer::DUMMY)) { // skip dummy nodes
 	  continue;
 	}
 	int layer2 = succ->moreData->layer;
@@ -80,7 +188,7 @@ void LinearPlot::insertDummies () {
 	if (diff > 1) { // no direct neighbours, need dummy padding
 	  auto lt = node; // pointer to current dummy's predecessor
 	  for (int i(layer1 + 1); i <= layer2 - 1; ++i) { // all layers between nodes
-	    std::shared_ptr<ReadContainer> dummy(new ReadContainer());
+	    p_read_t dummy(new ReadContainer());
 	    dummy->flags |= ReadContainer::DUMMY;
 	    lg.at(i).push_back(dummy);
 	    dummy->moreData = new PlotInfo;
@@ -103,13 +211,55 @@ std::vector<std::vector<bool>> LinearPlot::transitiveReduction () {
   std::vector<std::vector<bool>> d(N, std::vector<bool>(N)); // connectivity array
 
   // step 1: mark all existing connections
-  for (auto& node : v) {
+/*
+    for (auto& node : v) {
     int i(node->moreData->id);
     if (node->threePrimeRead) for (auto rt : *(node->threePrimeRead) ) {
       int j(rt->moreData->id);
       d[j][i] = d[i][j] = true;
     }
+    if (node->fivePrimeRead) for (auto rt : *(node->fivePrimeRead) ) {
+      int j(rt->moreData->id);
+      d[j][i] = d[i][j] = true;
+    }
   }
+*/    
+  
+  std::queue<p_read_t> q;
+  q.push(v[0]);
+
+  while (!q.empty()) {
+    auto node = q.front();
+    q.pop();
+    auto i = node->moreData->id;
+    
+    node->flags ^= ReadContainer::PROCESSED;
+    if (node->threePrimeRead) for (auto n : *node->threePrimeRead) {
+	if (n->flags & ReadContainer::PROCESSED) {
+	  q.push(n);
+	}
+        auto j = n->moreData->id;
+	d[i][j] = d[j][i] = true;
+    }
+    if (node->fivePrimeRead) for (auto n : *node->fivePrimeRead) {
+	if (n->flags & ReadContainer::PROCESSED) {
+	  q.push(n);
+	}
+        auto j = n->moreData->id;
+	d[i][j] = d[j][i] = true;
+    }
+  }
+
+  
+  #ifdef DEBUG
+  std::cout << "before reduction:\n";
+  for (auto line : d) {
+    for (auto row : line) {
+      std::cout << row << "  ";
+    }
+    std::cout << std::endl;
+  }
+  #endif
 
   // step 2: transitive reduction
   for (auto& x : v) {
@@ -125,6 +275,17 @@ std::vector<std::vector<bool>> LinearPlot::transitiveReduction () {
     }
   }
 
+  
+  #ifdef DEBUG
+  std::cout << "after reduction:\n";
+  for (auto line : d) {
+    for (auto row : line) {
+      std::cout << row << "  ";
+    }
+    std::cout << std::endl;
+  }
+  #endif
+
   return d;
 }
 
@@ -133,15 +294,8 @@ void LinearPlot::barycenterCoords () {
   auto& lg = layeredGraph;
   auto d = transitiveReduction(); // calculate reduced link matrix
 
-  for (auto line : d) {
-    for (auto row : line) {
-      std::cout << row << "  ";
-    }
-    std::cout << std::endl;
-  }
-
   // function to order elements in a layer according to their y-coordinate (PlotInfo->c2)
-  auto yComparator = [](std::shared_ptr<ReadContainer> a, std::shared_ptr<ReadContainer> b) {
+  auto yComparator = [](p_read_t a, p_read_t b) {
     return a->moreData->c2 < b->moreData->c2; // weak ordering of y-coordinate c2
   };
   
@@ -149,12 +303,19 @@ void LinearPlot::barycenterCoords () {
   for (auto& LL : lg) { // for each layer
     for (auto el : LL.second) { // each node in layer
       // calculate barycenter of predecessors
-      el->moreData->c2 = 0.0f;
+      el->moreData->c2 = 0;
       if (el->fivePrimeRead) {
+	uint count(1);
 	for (auto pre : *(el->fivePrimeRead)) { // all predecessors
-	  el->moreData->c2 += pre->moreData->c2;
+	  if (d[el->moreData->id][pre->moreData->id]) {
+	    el->moreData->c2 += pre->moreData->c2;
+	    ++count;
+	  }
 	}
-	el->moreData->c2 /= el->fivePrimeRead->size();
+	std::cout << "node " << *el << " has " << count << " predecessors.\n";
+	if (count > 0) {
+	  el->moreData->c2 = el->moreData->c2 / count;
+	}
       }
     }
 
@@ -176,76 +337,113 @@ void LinearPlot::barycenterCoords () {
 
 
 void LinearPlot::createPlotCoords () {
+  debug("createPlotCoords() -- graph has " + std::to_string(layeredGraph.size()) + " layers");
+  if (layeredGraph.empty()) {   // hierarchy was not constructed yet
+    insertDummies();
+    barycenterCoords();
+  }
+
+  // find size required per layer; calculate bounding box during progress
+  std::map<chr_pos_t, int> llargest; // largest read per layer
+  for (auto ii(layeredGraph.begin()); ii != layeredGraph.end(); ++ii) {
+    auto i(ii->first);
+    llargest[i] = 0;
+    for (auto& node : layeredGraph.at(i)) {
+      if (!(node->flags & ReadContainer::DUMMY)) {
+	int size = node->length();
+	llargest[i] = (size > llargest[i]) ? size : llargest[i];
+      }
+    }
+    br.w += llargest[i];
+    br.h = (layeredGraph.at(i).size() > br.h) ? layeredGraph.at(i).size() : br.h;
+  }
+  br.w += (layeredGraph.size() - 1) * dx;
+  br.h = (br.h + (br.h - 1) / 2) * dy;
+
+  debug("-- createPlotCoords: creating coords");
+  debug("dx = " + std::to_string(dx) + ", dy = " + std::to_string(dy));
+  int x0(0);
+  uint count(0);
+  for (auto ii(layeredGraph.begin()); ii != layeredGraph.end(); ++ii) {
+    auto i(ii->first);
+    if (i > layeredGraph.begin()->first) { // not the first element
+      std::cout << "-- comparing " << i << " and " << (i-1) << std::endl;
+      x0 += llargest.at(i-1) + dx;
+    }
+    for (auto& node : layeredGraph.at(i)) {
+      node->moreData->c1 = x0;
+      node->moreData->c3 = x0 + node->length();
+
+      node->moreData->c2 *= (1.5 * dy);
+      if (node->moreData->c2 < br.y) {
+	br.y = node->moreData->c2;
+      }
+
+      std::cout << "layer " << i << ", node " << *node << " -- y: " << std::to_string(node->moreData->c2) << ", x: " << node->moreData->c1 << "-" << node->moreData->c3 << std::endl;
+    }
+    ++count;
+  }
 }
 
 
-std::shared_ptr<Rect> LinearPlot::boundingRect() const {
-  return std::make_shared<Rect>(boundingBox);
+std::shared_ptr<Rect> LinearPlot::boundingRect() {
+  if (br.h == 0 && br.w == 0) { // bounding box not calculated yet
+    createPlotCoords();
+  }
+  return std::make_shared<Rect>(br);
 }
+
 
 
 void LinearPlot::writeEps ( const std::string& fileName ) {
+  assignLayers();
   insertDummies();     // neccessary for correct placement
-  barycenterCoords();  
+  barycenterCoords();
+  createPlotCoords();
 
-/*
   std::ofstream out(fileName);
   assume(out.good(), "Error writing to: " + fileName, false);
   if (!out.good()) return;
 
   // file header + draw used chromosomes
-  auto rect = writeEpsHeader(out, dx, dy);
   auto innerRect = boundingRect();
+  auto chrRect  = writeEpsHeader(out, dx, dy, *innerRect);
 
-  log("-- obounds: " + std::to_string(rect->x) + "/" + std::to_string(rect->y) + ", " +
-      std::to_string(rect->w) + "x" + std::to_string(rect->h) );
+  float s = 1.0 * (chrRect->w - 2 * dx) / innerRect->w;
+  debug("Scaling factor " + std::to_string(s));
 
-  log("-- ibounds: " + std::to_string(innerRect->x) + "/" + std::to_string(innerRect->y) + ", " +
-      std::to_string(innerRect->w) + "x" + std::to_string(innerRect->h) );
+  int xOffs(dx);
+  int yOffs(chrRect->y + dy - innerRect->y);
 
-  int xOffs(-innerRect->x);
-  int yOffs((chromosomes.size() + 1) * dy - innerRect->y);
+  debug("Offsets: x=" + std::to_string(xOffs) + ", y=" + std::to_string(yOffs) );
 
-  log("-- offsets: " + std::to_string(xOffs) + "/" + std::to_string(yOffs) );
+  for (auto& layer : layeredGraph) {
+    for (auto& node : layer.second) {
+      if (!(node->flags & ReadContainer::DUMMY)) { // draw non-dummy nodes
+	auto color = PALETTE[node->chromosome];
+	int width = node->moreData->c3 - node->moreData->c1;
+	int xpos = node->moreData->c1;
+	int ypos = node->moreData->c2;
+	out << color[0] << " " << color[1] << " " << color[2] << " ";
+	out << s*width << " " << xOffs + s*xpos << " " << yOffs + s*ypos << " exon\n";
+	node->flags |= ReadContainer::PROCESSED;
 
-  // draw connection lines
-  for (auto& conn : connections) {
-    int x0(xOffs);
-    int x1(x0);
-    int y0(yOffs + 0.25*dy);
-    int y1(y0);
-    if (conn.a->lt < conn.b->lt) { // a left of b
-      x0 += conn.a->rt;
-      x1 += conn.b->lt;
-      y0 += conn.a->y;
-      y1 += conn.b->y;
+	if (node->threePrimeRead) for (int i(0); i < node->threePrimeRead->size(); ++i) { // draw connection lines
+          auto& succ = node->threePrimeRead->at(i);
+	  if (succ && !(succ->flags & ReadContainer::DUMMY)) {
+	    int y2 = succ->moreData->c2;
+	    int x2 = succ->moreData->c1;
+	    int cx = (xpos + width + x2) / 2;
+	    int cy = (ypos + y2) / 2;
+	    out << "(" << node->threePrimeRefs->at(i) << ") " << xOffs + s*cx << " " << yOffs + s*cy + 0.15 * dy << " ";
+	    out << xOffs + s*(xpos+width) << " " << yOffs+s*ypos << " " << xOffs + s*x2 << " " << yOffs + s*y2 << " conn\n";
+	  }
+	}
+      }
     }
-    else {   // a right of b, should not happen anymore
-      x0 += conn.b->rt;
-      x1 += conn.a->lt;
-      y0 += conn.b->y;
-      y1 += conn.a->y;
-    }
-    float dx = x1 - x0;
-    float dy = y1 - y0;
-    float dydx = dy/dx;
-    float L = sqrt(dx*dx + dy*dy);
-    float cy = y0 + 0.5 * L * dydx - 0.15 * dy;
-    out << "(" << conn.num << ") " << x0 + dx/2 << " " << cy << " "; // information for label
-    out << x1 << " " << y1 << " " << x0 << " " << y0 << " conn\n";   // information for line
   }
-
-  // draw treeplot
-  for (auto& exon : positions) {
-    auto color = PALETTE[exon->chr];
-    int width = exon->rt - exon->lt;
-    int xPos = exon->lt + xOffs;
-    int yPos = exon->y + yOffs;
-    out << color[0] << " " << color[1] << " " << color[2] << " "; // define current color
-    out << width << " " << xPos << " " << yPos << " exon\n";
-  }
-
+  
   out << "%%EOF";
   out.flush();
-  out.close(); */
+  out.close();
 }

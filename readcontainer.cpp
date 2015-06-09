@@ -140,9 +140,8 @@ std::ostream& operator << ( std::ostream& output, ReadContainer& rc ) {
     output << "dummy read";
   }
   else {
-    output << std::to_string(rc.fivePrimeEnd) << "-" <<
-      std::to_string(rc.threePrimeEnd) << " @ " <<
-      std::to_string(rc.chromosome);
+    output << std::to_string(rc.chromosome) << ":" << std::to_string(rc.fivePrimeEnd) << "-" <<
+      std::to_string(rc.threePrimeEnd);
   } 
   return output;
 }

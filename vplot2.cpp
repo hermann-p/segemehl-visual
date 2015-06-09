@@ -27,7 +27,7 @@ PlotChromosome* vPlot::addChromosome ( const Genome* genome, const chr_num_t id 
 }
 
 
-std::shared_ptr<Rect> vPlot::writeEpsHeader ( std::ostream& out, const int dx, const int dy ) const {
+std::shared_ptr<Rect> vPlot::writeEpsHeader ( std::ostream& out, const int dx, const int dy, Rect& contentBounds ) {
   // determine longest chromosome to scale output chromosomes
   int longest = 0;
   for (auto& chr : chromosomes) {
@@ -39,7 +39,9 @@ std::shared_ptr<Rect> vPlot::writeEpsHeader ( std::ostream& out, const int dx, c
   out << "%!PS-Adobe-3.0 EPSF-3.0\n";
 
   auto br = boundingRect();
-  out << "%%BoundingBox: " << 0 << " " << 0 << " " << br->w << " " << br->h << "\n";
+  float scale = 1.0 * br->w / contentBounds.w;
+  int h = br->h + scale * contentBounds.h;
+  out << "%%BoundingBox: " << 0 << " " << 0 << " " << br->w << " " << h << "\n";
 
   br->x += dx;
   br->y += dy;
@@ -94,8 +96,11 @@ std::shared_ptr<Rect> vPlot::writeEpsHeader ( std::ostream& out, const int dx, c
     chr.second->writeEps(out, *br, dx, dy, chr_x_scale, PALETTE[chrColId++]);
     //    auto h = chr.second->boundingRect()->h + dy;
     int h = dy;
-    br->y += h;
-    br->h -= h;
+    //    br->y += h;
+    br->h += h;
+    debug("chromosome painted, bbox now: "
+	  + std::to_string(br->x) + "/" + std::to_string(br->y)
+	  + ": " + std::to_string(br->w) + "x" + std::to_string(br->h));
   }
   br->h += dy;
 
