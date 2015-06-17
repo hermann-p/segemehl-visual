@@ -18,7 +18,7 @@ int PlotChromosome::nExons () const {
 }
 
 
-void PlotChromosome::addExon ( const std::shared_ptr<ReadContainer> exon, int layer ) {
+void PlotChromosome::addExon ( const p_read_t exon, int layer ) {
 
   auto p1 = exon->fivePrimeEnd;
   if (exons.find(p1) == exons.end()) { // already existss

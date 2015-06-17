@@ -66,7 +66,7 @@ std::shared_ptr<Rect> vPlot::writeEpsHeader ( std::ostream& out, const int dx, c
   out << "} def\n\n";
 
   // line from x0 y0 to x1 y1
-  out << "/conn {\n";
+  out << "/conn { %link_num, ln_x, ln_y, x0, y0, x1, y1\n";
   out << " newpath\n";
   out << " moveto\n";
   out << " lineto\n";
@@ -108,7 +108,7 @@ std::shared_ptr<Rect> vPlot::writeEpsHeader ( std::ostream& out, const int dx, c
 }
 
 
-void vPlot::connectExons ( std::shared_ptr<ReadContainer> lt, std::shared_ptr<ReadContainer> rt ) {
+void vPlot::connectExons ( p_read_t lt, p_read_t rt ) {
   assume(lt != nullptr, "Left exon doesn't exist");
   assume(rt != nullptr, "Right exon doesn't exist");
   std::cout << "---- connecting " << *lt << " to " << *rt << std::endl;

@@ -60,12 +60,12 @@ void Genome::createChromosome ( const std::string name, const uint32_t length ) 
   chrNames.push_back(name);
   chrLens.push_back(length);
   chrNums.emplace( name, N );
-  readPos->push_back(new std::map<chr_pos_t, std::shared_ptr<ReadContainer>>());
+  readPos->push_back(new std::map<chr_pos_t, p_read_t>());
 }
 
 
-std::shared_ptr<ReadContainer> Genome::createRead( const chr_num_t chr, const chr_pos_t pos, const short len ) {
-  std::shared_ptr<ReadContainer> rc = getReadAt(chr, pos);
+p_read_t Genome::createRead( const chr_num_t chr, const chr_pos_t pos, const short len ) {
+  p_read_t rc = getReadAt(chr, pos);
   if (rc == nullptr) {                      // no read on chr:pos exists yet
     rc = std::make_shared<ReadContainer>(chr, pos, len);
     readPos->at(chr)->emplace(pos, rc);          // register read with genome navigation map
@@ -74,7 +74,7 @@ std::shared_ptr<ReadContainer> Genome::createRead( const chr_num_t chr, const ch
 }
 
 
-std::shared_ptr<ReadContainer> Genome::getReadAt ( const chr_num_t chr, const chr_pos_t pos ) const {
+p_read_t Genome::getReadAt ( const chr_num_t chr, const chr_pos_t pos ) const {
   auto chromosome = readPos->at(chr);
   auto lookup = chromosome->find(pos);
   if (lookup == chromosome->end()) {
@@ -84,7 +84,7 @@ std::shared_ptr<ReadContainer> Genome::getReadAt ( const chr_num_t chr, const ch
 }
 
 
-std::shared_ptr<ReadContainer> Genome::getReadAt ( const std::string chr, const chr_pos_t pos ) const {
+p_read_t Genome::getReadAt ( const std::string chr, const chr_pos_t pos ) const {
   return getReadAt( getChrNum(chr), pos );
 }
 
@@ -208,7 +208,7 @@ bool Genome::parseDataLine ( const std::string& line ) {
     }
     
     pos3 = pos5 + calcLength(tokens[CIGAR]);
-    std::shared_ptr<ReadContainer> rc = getReadAt(chr, pos5);
+    p_read_t rc = getReadAt(chr, pos5);
     if (rc == nullptr) {
       rc = std::make_shared<ReadContainer>(chr, pos5, pos3-pos5);
       registerRead(rc);
@@ -224,7 +224,7 @@ bool Genome::parseDataLine ( const std::string& line ) {
   return true;
 }
 
-void Genome::registerRead (  std::shared_ptr<ReadContainer> rc ) {
+void Genome::registerRead (  p_read_t rc ) {
   const chr_num_t chr = rc->chromosome;
   readPos->at(chr)->emplace(rc->fivePrimeEnd, rc);   // Link 5' end to identify as successor
   readPos->at(chr)->emplace(-rc->threePrimeEnd, rc); // Link 3' end to identify as predecessor

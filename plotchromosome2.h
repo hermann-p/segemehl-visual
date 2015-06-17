@@ -2,6 +2,7 @@
 #define PLOTCHROMOSOME_H
 
 #include "genome.h"
+#include "readcontainer.h"
 
 #include <string>
 #include <map>
@@ -15,7 +16,7 @@ struct Rect {
 class PlotChromosome {
  public:
   PlotChromosome ( const size_t, const chr_pos_t, const std::string );
-  void addExon ( const std::shared_ptr<ReadContainer>, int layer = 0 );
+  void addExon ( const p_read_t, int layer = 0 );
 
   int nExons() const;
   void printout();
@@ -27,7 +28,7 @@ class PlotChromosome {
  private:
   void assignIds ();
   
-  std::map<chr_pos_t, std::shared_ptr<ReadContainer>> exons;
+  std::map<chr_pos_t, p_read_t> exons;
   std::string name;
 };		  
 

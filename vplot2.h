@@ -10,9 +10,11 @@
 class vPlot {
  public:
   vPlot();
+  
+  static const int WIDTH = 1024;
 
   virtual PlotChromosome* addChromosome ( const Genome* genome, const chr_num_t id );
-  virtual void fromRead ( std::shared_ptr<ReadContainer> seed, Genome* genom ) = 0;
+  virtual void fromRead ( p_read_t seed, Genome* genom ) = 0;
   virtual void writeEps ( const std::string& fileName ) = 0;
   virtual std::shared_ptr<Rect> boundingRect () = 0;
   virtual void createPlotCoords () = 0;
@@ -46,7 +48,7 @@ class vPlot {
   int __N;
 
   int exonCount ();
-  void connectExons ( std::shared_ptr<ReadContainer> lt, std::shared_ptr<ReadContainer> rt );
+  void connectExons ( p_read_t lt, p_read_t rt );
 };
 
 #endif // VPLOT_H

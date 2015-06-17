@@ -56,7 +56,7 @@ public:
   } FLAGS;
 
   PlotInfo* moreData;
-  int findLink( std::shared_ptr<ReadContainer> partner, const bool downstream = true );
+  int findLink( p_read_t partner, const bool downstream = true );
 };
 
 bool operator == ( const ReadContainer& a, const ReadContainer& b );

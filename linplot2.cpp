@@ -80,96 +80,19 @@ void LinearPlot::assignLayers () {
     return (p_read_t)nullptr; // no node found
   };
 
+  // longest path algorithm
   while (U.size() < flatGraph.size()) {
     p_read_t v = select_next_node();
     if (v) { // element for this layer found
-      layeredGraph[current].push_back(v);
-      U.insert(v->moreData->id);
+      layeredGraph[current].push_back(v); // map bracket-access creates new element if none found
+      U.insert(v->moreData->id);          // add v to "assigned" set
     }
     else { // no more elements for this layer
       ++current;
-      Z.insert(U.begin(), U.end());
+      Z.insert(U.begin(), U.end());       // add all "assigned" to "assigned and below current"
     }
   }
 }
-
-/*
-void fromRead ( p_read_t seed, Genome* genome ) {
-  if (seed->flags & ReadContainer::PROCESSED) { // Is already node in a graph
-    return;
-  }
-  std::queue<p_read_t> q;
-  q.push(seed);
-  int layer = 0;
-
-  // Lambda function to avoid copy-paste for bi-directional traversal
-  auto traverse = [&q,layer](std::vector<p_read_t> list, int diff) {
-    for (auto el : list) {
-      if (el->flags & ReadContainer::PROCESSED) {
-	continue;
-      }
-      if (!el->moreData) {
-	el->moreData = new PlotInfo;
-	el->moreData->layer = layer + diff;
-	el->moreData->c2 = 0;
-      }
-      else {
-	int Lnew = layer + diff;
-	int Lold = el->moreData->layer;
-	bool update = (diff > 1) ? (Lnew > Lold) : (Lnew < Lold); // successors (diff > 1) need to be on higher layers, predecessors on lower ones
-	if (update) el->moreData->layer = Lnew;
-      }
-      q.push(el);
-    }
-  };
-  
-  while (!q.empty()) {
-    auto node = q.front();
-    q.pop();
-
-    std::cout << "Working on: " << *node << std::endl;
-
-    if (!(node->flags & ReadContainer::DUMMY)) {
-      auto chromosome = addChromosome(genome, node->chromosome);
-      chromosome->addExon(node, layer);
-    }
-    flatGraph.push_back(node);
-
-    layer = node->moreData->layer;
-    node->flags |= ReadContainer::PROCESSED;
-    node->moreData->id = flatGraph.size();
-    layeredGraph[layer].push_back(node);
-
-    if (node->fivePrimeRead) traverse(*node->fivePrimeRead, -1);
-    if (node->threePrimeRead) traverse(*node->threePrimeRead, +1);
-  }
-
-  correctDepths();
-} */
-
-
-/*void LinearPlot::correctDepths () {
-  debug("#### CORRECTING LAYER ASSIGNMENTS ####");
-  bool correct(false);
-  do {
-    correct = true;
-    for (auto& layer : layeredGraph) {
-      auto L = layer.first;
-
-      for (int i(0); i < layer.second.size(); ++i) {
-	auto& node = layer.second.at(i);
-	if (node->moreData->layer != L) {
-	  debug( "Found level " + std::to_string(node->moreData->layer) + " node in level " +
-		 std::to_string(L) + ", -> moving");
-	  correct = false;
-	  layeredGraph[node->moreData->layer].push_back(node);
-	  layer.second.erase( layer.second.begin() + i );
-	}
-      }
-    }
-  } while (!correct);
-  }*/
-
 
 void LinearPlot::insertDummies () {
   auto& lg = layeredGraph;
@@ -197,7 +120,7 @@ void LinearPlot::insertDummies () {
 	    connectExons(lt, dummy);
 	    lt = dummy;
 	  }
-	  connectExons(lt, succ);
+	  connectExons(lt, succ); // connect last dummy to the real successor
 	} // padding detected
       } // successors of node
     } // nodes in layer
@@ -209,22 +132,8 @@ std::vector<std::vector<bool>> LinearPlot::transitiveReduction () {
   int N = flatGraph.size();
   auto& v = flatGraph;
   std::vector<std::vector<bool>> d(N, std::vector<bool>(N)); // connectivity array
-
-  // step 1: mark all existing connections
-/*
-    for (auto& node : v) {
-    int i(node->moreData->id);
-    if (node->threePrimeRead) for (auto rt : *(node->threePrimeRead) ) {
-      int j(rt->moreData->id);
-      d[j][i] = d[i][j] = true;
-    }
-    if (node->fivePrimeRead) for (auto rt : *(node->fivePrimeRead) ) {
-      int j(rt->moreData->id);
-      d[j][i] = d[i][j] = true;
-    }
-  }
-*/    
   
+  // step 1: fill array with all known connections
   std::queue<p_read_t> q;
   q.push(v[0]);
 
@@ -319,7 +228,7 @@ void LinearPlot::barycenterCoords () {
       }
     }
 
-    // sort elements
+    // sort elements according to their y-position
     sort(LL.second.begin(), LL.second.end(), yComparator);
 
     // get offset to center current layer elements around first layer
@@ -379,7 +288,9 @@ void LinearPlot::createPlotCoords () {
 	br.y = node->moreData->c2;
       }
 
+#ifdef DEBUG
       std::cout << "layer " << i << ", node " << *node << " -- y: " << std::to_string(node->moreData->c2) << ", x: " << node->moreData->c1 << "-" << node->moreData->c3 << std::endl;
+#endif
     }
     ++count;
   }
@@ -436,7 +347,7 @@ void LinearPlot::writeEps ( const std::string& fileName ) {
 	    int cx = (xpos + width + x2) / 2;
 	    int cy = (ypos + y2) / 2;
 	    out << "(" << node->threePrimeRefs->at(i) << ") " << xOffs + s*cx << " " << yOffs + s*cy + 0.15 * dy << " ";
-	    out << xOffs + s*(xpos+width) << " " << yOffs+s*ypos << " " << xOffs + s*x2 << " " << yOffs + s*y2 << " conn\n";
+	    out << xOffs + s*(xpos+width) << " " << yOffs+s*ypos+0.2*dy << " " << xOffs + s*x2 << " " << yOffs + s*y2+0.2*dy << " conn\n";
 	  }
 	}
       }
