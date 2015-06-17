@@ -13,7 +13,7 @@ class vPlot {
   
   static const int WIDTH = 1024;
 
-  virtual PlotChromosome* addChromosome ( const Genome* genome, const chr_num_t id );
+  virtual PlotChromosome* addChromosome ( Genome* genome, const chr_num_t id );
   virtual void fromRead ( p_read_t seed, Genome* genom ) = 0;
   virtual void writeEps ( const std::string& fileName ) = 0;
   virtual std::shared_ptr<Rect> boundingRect () = 0;
@@ -49,6 +49,9 @@ class vPlot {
 
   int exonCount ();
   void connectExons ( p_read_t lt, p_read_t rt );
+  
+  // TODO: remove this hack!
+  Genome* genome;
 };
 
 #endif // VPLOT_H

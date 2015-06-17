@@ -233,15 +233,26 @@ void LinearPlot::barycenterCoords () {
 
     // get offset to center current layer elements around first layer
     int offset = (LL.second.size() > size0) ? size0 - LL.second.size() : 0;
+    debug("Offset at layer #" + std::to_string(LL.first) + ": " + std::to_string(offset));
 
     // apply offset to all elements in layer
-    for (int i(1); i < LL.second.size(); ++i) {
-      if (LL.second.at(i-1)->moreData->c2 == LL.second.at(i)->moreData->c2) {
-	offset += 2; // move elements on same y position apart
-      }
+    for (int i(0); i < LL.second.size(); ++i) {
       LL.second.at(i)->moreData->c2 += offset;
+      if (i > 0 && LL.second.at(i-1)->moreData->c2 == LL.second.at(i)->moreData->c2) {
+	offset += 2; // move elements on same y position apart
+	LL.second.at(i)->moreData->c2 += 2;
+	debug("-- increasing offset to " + std::to_string(offset));
+      }
     }
   }
+  
+#ifdef DEBUG
+  for (auto& LL : layeredGraph) {
+    for (int i(0); i < LL.second.size(); ++i) {
+      std::cout << "Info: -- Layer #" << std::to_string(LL.first) << ", node #" << i << " y=" << LL.second.at(i)->moreData->c2 << std::endl;
+    }
+  }
+#endif
 }
 
 
@@ -264,29 +275,32 @@ void LinearPlot::createPlotCoords () {
       }
     }
     br.w += llargest[i];
+    debug("-- layer #" + std::to_string(i) + ": size " + std::to_string(llargest[i]));
     br.h = (layeredGraph.at(i).size() > br.h) ? layeredGraph.at(i).size() : br.h;
   }
   br.w += (layeredGraph.size() - 1) * dx;
-  br.h = (br.h + (br.h - 1) / 2) * dy;
-
+  br.y = br.h / 2 * dy;
+  br.h = br.h * dy;
+  
+#ifdef DEBUG
   debug("-- createPlotCoords: creating coords");
-  debug("dx = " + std::to_string(dx) + ", dy = " + std::to_string(dy));
+  std::cout << "-- Graph Bounding box: " << br.w << "x" << br.h << " @ " << br.x << "/" << br.y << std::endl;
+#endif
+  
   int x0(0);
   uint count(0);
   for (auto ii(layeredGraph.begin()); ii != layeredGraph.end(); ++ii) {
     auto i(ii->first);
     if (i > layeredGraph.begin()->first) { // not the first element
-      std::cout << "-- comparing " << i << " and " << (i-1) << std::endl;
       x0 += llargest.at(i-1) + dx;
     }
     for (auto& node : layeredGraph.at(i)) {
       node->moreData->c1 = x0;
       node->moreData->c3 = x0 + node->length();
-
-      node->moreData->c2 *= (1.5 * dy);
-      if (node->moreData->c2 < br.y) {
-	br.y = node->moreData->c2;
-      }
+      node->moreData->c2 *= (.5 * dy);
+//      if (node->moreData->c2 < br.y) {
+//	br.y = node->moreData->c2;
+//      }
 
 #ifdef DEBUG
       std::cout << "layer " << i << ", node " << *node << " -- y: " << std::to_string(node->moreData->c2) << ", x: " << node->moreData->c1 << "-" << node->moreData->c3 << std::endl;
@@ -320,12 +334,17 @@ void LinearPlot::writeEps ( const std::string& fileName ) {
   auto innerRect = boundingRect();
   auto chrRect  = writeEpsHeader(out, dx, dy, *innerRect);
 
-  float s = 1.0 * (chrRect->w - 2 * dx) / innerRect->w;
+  //float s = 1.0 * (chrRect->w - 2 * dx) / innerRect->w;
+  float s = 1.0 * WIDTH / innerRect->w;
   debug("Scaling factor " + std::to_string(s));
 
   int xOffs(dx);
-  int yOffs(chrRect->y + dy - innerRect->y);
+//  int yOffs(chrRect->y + dy - innerRect->y);
+  int yOffs(chrRect->y + chrRect->h + innerRect->y);
 
+#ifdef DEBUG
+  std::cout << "-- innerRect: " << innerRect->w << "x" << innerRect->h << " @ " << innerRect->x << "/" << innerRect->y << std::endl;
+#endif
   debug("Offsets: x=" + std::to_string(xOffs) + ", y=" + std::to_string(yOffs) );
 
   for (auto& layer : layeredGraph) {
@@ -335,6 +354,10 @@ void LinearPlot::writeEps ( const std::string& fileName ) {
 	int width = node->moreData->c3 - node->moreData->c1;
 	int xpos = node->moreData->c1;
 	int ypos = node->moreData->c2;
+	// draw a label
+	out << "(" << genome->getChrName(node->chromosome) << "_" << std::to_string(node->moreData->id) << ") "; // label: chomosome name + _ + N
+	out << xOffs + (xpos + width/4) * s << " " << yOffs + (ypos + 0.15 * dy) * s << " lbl\n";                // calculate position
+	// draw the exon
 	out << color[0] << " " << color[1] << " " << color[2] << " ";
 	out << s*width << " " << xOffs + s*xpos << " " << yOffs + s*ypos << " exon\n";
 	node->flags |= ReadContainer::PROCESSED;

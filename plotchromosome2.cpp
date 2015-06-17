@@ -35,10 +35,9 @@ void PlotChromosome::addExon ( const p_read_t exon, int layer ) {
 
 // number all displayed fragments in order of position
 void PlotChromosome::assignIds() {
-  uint id(0);
+  uint id(1);
   for (auto &exon_it : exons) {
-    PlotInfo* pi = (PlotInfo*)(exon_it.second->moreData);
-    pi->id = id++;
+    exon_it.second->moreData->id = id++;
   }
 }
 

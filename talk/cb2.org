@@ -3,11 +3,21 @@
 #+Date: 
 #+Email: 
 
+#+startup: beamer
+#+BEAMER_THEME: PaloAlto
+#+BEAMER_HEADER: \definecolor{myPrimary}{RGB}{45,217,0}
+#+BEAMER_HEADER: \definecolor{mySecondary}{RGB}{0,162,87}
+#+BEAMER_HEADER: \definecolor{myTertiary}{RGB}{255,67,0}
+#+BEAMER_HEADER: \setbeamercolor{structure}{fg=myPrimary,bg=mySecondary}
+#+BEAMER_HEADER: \setbeamercolor{palette primary}{fg=myPrimary}
+#+BEAMER_HEADER: \setbeamercolor{palette secondary}{fg=mySecondary}
+#+BEAMER_HEADER: \setbeamercolor{palette tertiary}{fg=myTertiary}
+#+BEAMER_HEADER: \usepackage{droid}
+
 #+REVEAL_ROOT: ./reveal.js
 #+REVEAL_THEME: simple
 #+REVEAL_TRANS: none
-#+OPTIONS: num:nil 
-#+OPTIONS: toc:nil
+#+OPTIONS: num:nil toc:nil
 #+OPTIONS: reveal_control:nil
 
 * Introduction

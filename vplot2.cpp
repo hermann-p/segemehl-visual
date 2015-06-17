@@ -2,7 +2,8 @@
 #include "utils.h"
 #include "readcontainer.h"
 
-vPlot::vPlot()
+vPlot::vPlot() :
+  genome(nullptr)
 {
 }
 
@@ -14,7 +15,10 @@ int vPlot::exonCount () {
   return n;
 }
 
-PlotChromosome* vPlot::addChromosome ( const Genome* genome, const chr_num_t id ) {
+PlotChromosome* vPlot::addChromosome ( Genome* g, const chr_num_t id ) {
+  if (!genome) { // save the genome for further references... a temporary hack to avoid rewriting in later stages
+    genome = g;
+  }
   auto lookup = chromosomes.find(id);
   if (lookup != chromosomes.end()) { // exists already
     return lookup->second;
@@ -38,10 +42,11 @@ std::shared_ptr<Rect> vPlot::writeEpsHeader ( std::ostream& out, const int dx, c
 
   out << "%!PS-Adobe-3.0 EPSF-3.0\n";
 
-  auto br = boundingRect();
-  float scale = 1.0 * br->w / contentBounds.w;
-  int h = br->h + scale * contentBounds.h;
-  out << "%%BoundingBox: " << 0 << " " << 0 << " " << br->w << " " << h << "\n";
+  auto br = boundingRect();  // get bounding box size from graph
+  // float scale = 1.0 * br->w / contentBounds.w;
+  float scale = WIDTH * 1.0 / br->w; // set scaling factor for graph
+  int h = br->h + scale * br->h;
+  out << "%%BoundingBox: " << 0 << " " << 0 << " " << WIDTH + 2*dx << " " << h << "\n";
 
   br->x += dx;
   br->y += dy;
@@ -51,9 +56,18 @@ std::shared_ptr<Rect> vPlot::writeEpsHeader ( std::ostream& out, const int dx, c
   // setup font
   out << "/Helvetica findfont\n" << dy * 0.5 << " scalefont\n0 setgray\nsetfont\n\n";
 
-  float chr_x_scale = (br->w - 2*dx) * 1.0 / longest; // scale chromosomes to fit to plot
+  float chr_x_scale = WIDTH * 1.0 / (longest + dx); // scale chromosomes to fit to plot
 
   // ps-functions to save file size
+  
+  // put a text label at x/y
+  out << "/lbl { % text, x, y\n"
+	 " /Helvetica findfont\n"
+	 " " << dy * 0.5 << " scalefont\n"
+	 " 0 0 0 setrgbcolor setfont\n"
+	 " moveto\n"
+	 " show\n"
+	 "}def\n\n";
 
   // line from x y straight right by w
   out << "/cL { %w x y\n";
@@ -73,7 +87,7 @@ std::shared_ptr<Rect> vPlot::writeEpsHeader ( std::ostream& out, const int dx, c
   out << " 0 setgray\n";
   out << " stroke\n";
   out << " /Helvetica findfont\n ";
-  out << dy * 0.3 << " scalefont\n";
+  out << dy * 0.5 << " scalefont\n";
   out << " 1 0 0 setrgbcolor setfont\n";
   out << " moveto\n";
   out << " show\n";
