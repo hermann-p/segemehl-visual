@@ -17,6 +17,7 @@ class LinearPlot : public vPlot {
 
   void fromRead ( p_read_t seed, Genome* genome );  // construct tree from seed element
   void writeEps ( const std::string& fileName );
+  void addToSummary ( std::ostream & out, std::string title );
 
  private:
   void assignLayers ();                // apply longest path algorithm

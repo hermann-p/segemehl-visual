@@ -1,9 +1,12 @@
 #include "vplot2.h"
 #include "utils.h"
 #include "readcontainer.h"
+#include <limits>
 
 vPlot::vPlot() :
-  genome(nullptr)
+  genome(nullptr),
+  minLinks(std::numeric_limits<uint>::max()),
+  maxLinks(0)
 {
 }
 

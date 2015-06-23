@@ -12,16 +12,19 @@ void log ( const std::string msg ) {
 }
 
 
-void assume ( const bool isGood, const std::string msg, bool fatal ) {
+bool assume ( const bool isGood, const std::string msg, bool fatal ) {
   if (!isGood) {
     if (fatal) {
       std::cerr << "Error: " << msg << ", halting.\n";
       std::exit(-1);
+      return false; // pro forma for compiler
     }
     else {
       std::cerr << "Warning: " << msg << std::endl;
+      return false;
     }
   }
+  return true;
 }
 
 

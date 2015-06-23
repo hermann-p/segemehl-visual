@@ -26,24 +26,29 @@ struct Options {
   int xres = WIDTH;
   int yres = HEIGHT;
   string outFileName = "cb_out";
+  string reportFileName = "";
 };
 
 
 // Print usage information
 void printUsage (char** args) {
-  cout << "\n\nUsage: \n    " << args[0] << " -c|m|p chr:pos -f <path-to-file> [-r WxH] [-o <filename>]" << endl;
-  cout << "\n\
-Arguments:\n\
-    -h            print this help and exit\n\
-    -r WxH        set output width and height in pixels (won't affect vector graphics)\n\
-    -o filename   set output file name (.eps)\n\
-At least one required:\n\
-    -c            detect all circular transcripts (not implemented yet)\n\
-    -m            detect all multistrand spliced transcripts\n\
-    -p chr:pos    find all transcripts on chromosome chr, position pos\n\
-                  (multiple -p chr:pos allowed)\n\
-Required:\n\
-    -f filename   path to segemehl-generated .sam file\n\n" << endl;
+  cout << 
+"\n"
+"\n"
+"Usage: \n    " << args[0] << " -c|m|p chr:pos -f <path-to-file> [-r WxH] [-o <filename>]\n"; 
+"\n"
+"Arguments:\n"
+"    -h            print this help and exit\n"
+// "    -r WxH        set output width and height in pixels (won't affect vector graphics)\n"
+"    -o filename   set output file name (.eps)\n"
+"    -s filename   print summary to file\n"
+"At least one required:\n"
+"    -c            detect all circular transcripts (not implemented yet)\n"
+"    -m            detect all multistrand spliced transcripts\n"
+"    -p chr:pos    find all transcripts on chromosome chr, position pos\n"
+"                  (multiple -p chr:pos allowed)\n"
+"Required:\n"
+"    -f filename   path to segemehl-generated .sam file\n\n";
 }
 
 
@@ -52,7 +57,7 @@ void parseOptions ( int argc, char** argv, Options* options ) {
   int o;
   // parse all arguments and mark the configuration as valid if both a filename and
   // at least one optional-mandatory selection parameter were given
-  while ((o = getopt(argc, argv, "hcmo:r:p:f:")) != -1) {
+  while ((o = getopt(argc, argv, "hcmo:r:p:f:s:")) != -1) {
     switch (o) {
     case 'h': // invalid options => show help and exit
       options->valid = false;
@@ -69,6 +74,8 @@ void parseOptions ( int argc, char** argv, Options* options ) {
     case 'o':
       options->outFileName = optarg;
       break;
+    case 's': // set filename for summary
+      options->reportFileName = optarg;
     case 'r': {
       auto dims = strsplit(optarg, "x", false);
       if (dims.size() == 2) {
@@ -125,7 +132,13 @@ int main ( int argc, char** argv ) {
   Genome* g = new Genome(options.multistrand, options.circular);
   g->read(options.fileName);
 
-  auto* plots(new vector< shared_ptr<vPlot> >);
+  ostream* report = nullptr;
+  if (options.reportFileName != "") {
+    report = new ofstream(options.reportFileName);
+    if (assume(report->good(), "Couldn't create file for report, reports will be skipped, warnings will be shown.")) {
+      *report << "input_file\t" << "chromosome_positions\t" << "min_read_depth\t" << "max_read_depth\n";
+    }
+  }
   
   if (options.circular) {
     cout << "Skipping circular detection: not implemented yet" << endl;
@@ -136,6 +149,9 @@ int main ( int argc, char** argv ) {
 	LinearPlot plot;
  	plot.fromRead(seed, g);
 	plot.writeEps(options.outFileName + "_circ_" + to_string(++N) + ".eps");
+	if (report) {
+	  plot.addToSummary(*report, options.fileName + "_circular_" + to_string(N) );
+	}
       }
     }
 
@@ -149,6 +165,9 @@ int main ( int argc, char** argv ) {
 	LinearPlot plot;
  	plot.fromRead(seed, g);
 	plot.writeEps(options.outFileName + "_multi_" + to_string(++N) + ".eps");
+	if (report) {
+	  plot.addToSummary(*report, options.fileName + "_multi_" + to_string(N) );
+	}
       }
     }
   }
@@ -162,6 +181,9 @@ int main ( int argc, char** argv ) {
 	LinearPlot plot;
  	plot.fromRead(seed, g);
 	plot.writeEps(options.outFileName + "_pos_" + to_string(++N) + ".eps");
+	if (report) {
+	  plot.addToSummary(*report, options.fileName + "_manual_" + to_string(N) );
+	}
       }
     }
   }

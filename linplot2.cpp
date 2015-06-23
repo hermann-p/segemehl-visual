@@ -5,6 +5,7 @@
 #include <math.h>
 #include <queue>
 #include <algorithm>
+#include <limits>
 
 LinearPlot::LinearPlot ( int dx, int dy ) 
   : vPlot(),
@@ -40,11 +41,17 @@ void LinearPlot::fromRead ( p_read_t seed, Genome* genome ) {
     node->moreData->id = flatGraph.size();
     node->moreData->c2 = 0;
     flatGraph.push_back(node);
-    if (node->threePrimeRead) for (auto& tpr : *node->threePrimeRead) {
-      if (!(tpr->flags & ReadContainer::PROCESSED)) {
-	q.push(tpr);
-      }
-    } // add all three prime linked nodes
+    if (node->threePrimeRead) {
+      for (auto& tpr : *node->threePrimeRead) {
+	if (!(tpr->flags & ReadContainer::PROCESSED)) {
+	  q.push(tpr);
+	}
+      } // add all three prime linked nodes
+      for (auto& nReads : *node->threePrimeRefs) {
+	if (nReads < minLinks) minLinks = nReads;
+	if (nReads > maxLinks) maxLinks = nReads;
+      } // find link dephts for filtering
+    }
     if (node->fivePrimeRead) for (auto& fpr : *node->fivePrimeRead) {
       if (!(fpr->flags & ReadContainer::PROCESSED)) {
 	q.push(fpr);
@@ -86,6 +93,7 @@ void LinearPlot::assignLayers () {
     if (v) { // element for this layer found
       layeredGraph[current].push_back(v); // map bracket-access creates new element if none found
       U.insert(v->moreData->id);          // add v to "assigned" set
+      v->moreData->layer = current;
     }
     else { // no more elements for this layer
       ++current;
@@ -108,6 +116,9 @@ void LinearPlot::insertDummies () {
 	}
 	int layer2 = succ->moreData->layer;
 	int diff = layer2 - layer1;
+#ifdef DEBUG
+	std::cout << *node << "@" << node->moreData->layer << " <--> " << *succ << "@" << succ->moreData->layer << " difference: " << diff << " layers\n";
+#endif
 	if (diff > 1) { // no direct neighbours, need dummy padding
 	  auto lt = node; // pointer to current dummy's predecessor
 	  for (int i(layer1 + 1); i <= layer2 - 1; ++i) { // all layers between nodes
@@ -318,6 +329,21 @@ std::shared_ptr<Rect> LinearPlot::boundingRect() {
   return std::make_shared<Rect>(br);
 }
 
+
+void LinearPlot::addToSummary ( std::ostream& out, std::string title ) {
+  if (!assume(flatGraph.size() > 0, "LinaerPlot::addToSummary: Graph is empty, no summary will be written")) return;
+  if (!assume(out.good(), "LinaerPlot::addToSummary: Could not write to output file")) return;
+  out << title << "\t" << "an|";
+  int n(flatGraph.size());
+  for (int i(0); i < n; ++i) {
+    auto& node = flatGraph.at(i);
+    out << "chr" << genome->getChrName(node->chromosome) << ":" << node->fivePrimeEnd << "-" << node->threePrimeEnd;
+    if (i < n - 1) {
+      out << ",";
+    }
+  }
+  out << "|\t" << std::to_string(minLinks) <<"\t" << std::to_string(maxLinks) <<  std::endl;
+}
 
 
 void LinearPlot::writeEps ( const std::string& fileName ) {

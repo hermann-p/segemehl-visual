@@ -18,7 +18,8 @@ class vPlot {
   virtual void writeEps ( const std::string& fileName ) = 0;
   virtual std::shared_ptr<Rect> boundingRect () = 0;
   virtual void createPlotCoords () = 0;
-
+  virtual void addToSummary ( std::ostream& out, std::string title ) = 0;
+  
   std::shared_ptr<Rect> writeEpsHeader ( std::ostream& out, const int dx, const int dy, Rect& contentBounds );
 
   std::map<chr_num_t, PlotChromosome*> chromosomes;
@@ -43,6 +44,9 @@ class vPlot {
 				 {0.286,0.043,0.408},
 				 {0.541,0.169,0.733},
 				 {0.682,0.31,0.875}};
+				 
+  uint minLinks;
+  uint maxLinks;
   
  protected:
   int __N;
