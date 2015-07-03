@@ -1,6 +1,7 @@
 #include "genome.h"
 #include "readcontainer.h"
 #include "utils.h"
+#include "lockfreequeue.h"
 
 #include <string>
 #include <vector>
@@ -9,6 +10,8 @@
 #include <fstream>
 #include <cstdlib>
 #include <memory>
+
+#include <thread>
 
 #include <sstream>
 #include <cstdio>
@@ -91,17 +94,48 @@ p_read_t Genome::getReadAt ( const std::string chr, const chr_pos_t pos ) const 
 
 void Genome::read ( std::ifstream& input ) {
   log("Genome: reading file...");
-  unsigned int L(1);
+  unsigned int L(1);                         // line counter
+  LockFreeQueue<std::vector<std::string>> q;
+  
+  auto readerTask = [&q,&input]() {
+    debug("Starting reader thread...");
+      for (std::string line; getline(input, line);) {
+	q.push(strsplit(line, "\t"));
+      }
+      q.done();
+      debug("All data read and tokenized, closing reader rhread");
+  };
+  
+  auto parserTask = [&q,&L,this]() {
+    debug("Starting parser thread...");
+    std::vector<std::string> splits;
+    while(q.pop(splits)) {
+      assume(parseDataLine(splits), "Could not parse data in line " + std::to_string(L), false);
+      L++;
+    }
+    debug("All tokens processed, closing parser thread");
+  };
+  
+  // read and parse header lines sequentially
   for (std::string line; getline(input, line);) {
     //    std::cout << "Line #" << L << std::endl;
     if (line[0] == '@') {
       assume(parseHeaderLine(line), "Could not parse header in line " + std::to_string(L), false);
     }
     else {
-      assume(parseDataLine(line), "Could not parse data in line " + std::to_string(L), false);
+      break;  // header lines parsed, break and begin threaded processing
     }
     L++;
   }
+  
+  // init and start threads
+  std::thread readerThread(readerTask);
+  std::thread parserThread(parserTask);
+  
+  // wait for threads to finish
+  readerThread.join();
+  parserThread.join();
+  
   if (multistrand != nullptr) {
     log("Found " + std::to_string(multistrand->size()) + " strand switching events");
   }
@@ -152,8 +186,8 @@ bool Genome::parseHeaderLine ( const std::string& line ) {
 }
 
 
-bool Genome::parseDataLine ( const std::string& line ) {
-    auto tokens = strsplit(line, "\t");
+bool Genome::parseDataLine ( std::vector<std::string>& tokens ) {
+//   auto tokens = strsplit(line, "\t");
     unsigned char flags  = 0;
     chr_num_t chr = getChrNum(tokens[RNAME]);
     chr_pos_t pos5 = atoi( tokens[POS].c_str() );
@@ -206,8 +240,7 @@ bool Genome::parseDataLine ( const std::string& line ) {
 	}
       }
     }
-    
-//    assume(start != end, "Read with length 0 detected");
+
     if (start == end);
     
     pos3 = pos5 + calcLength(tokens[CIGAR]);

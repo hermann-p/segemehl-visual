@@ -51,7 +51,7 @@ private:
   uint calcLength ( const std::string cigar ) const;
 
   bool parseHeaderLine ( const std::string& line );
-  bool parseDataLine ( const std::string& line ); 
+  bool parseDataLine ( std::vector<std::string>& splits ); 
   enum SAM_FIELDS {
     FLAG = 1, RNAME = 2, POS = 3, CIGAR = 5, TLEN = 8, QUAL = 10
   };

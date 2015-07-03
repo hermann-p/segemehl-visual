@@ -4,9 +4,9 @@
 #include <limits>
 
 vPlot::vPlot() :
-  genome(nullptr),
   minLinks(std::numeric_limits<uint>::max()),
-  maxLinks(0)
+  maxLinks(0),
+  genome(nullptr)
 {
 }
 
