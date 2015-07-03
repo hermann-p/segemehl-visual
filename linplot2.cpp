@@ -9,16 +9,18 @@
 
 LinearPlot::LinearPlot ( int dx, int dy ) 
   : vPlot(),
-    dx(dx), dy(dy),
     //    minx(0), maxx(0), miny(0), maxy(0),
-    nextID('a'),
+    br( {0,0,0,0} ),
+    dx(dx), dy(dy),
     nFilter(0),
-    br( {0,0,0,0} )
+    nextID('a')
 {
+  debug("LinearPlot::Linearplot");
 }
 
 
 void LinearPlot::fromRead ( p_read_t seed, Genome* genome ) {
+  debug("LinearPlot::fromRead");
   if (seed->flags & ReadContainer::PROCESSED) {
     return;
   } // guardian
@@ -62,15 +64,18 @@ void LinearPlot::fromRead ( p_read_t seed, Genome* genome ) {
 
 
 void LinearPlot::assignLayers () {
+  debug("LinearPlot::assignLayers");
   std::unordered_set<uint> U;  // ids of assigned nodes
   std::unordered_set<uint> Z;  // ids of nodes assigned below current layer
   int current(1);
 
   // lambda to select next unassigned node with all known predecessors below current
   auto select_next_node = [&]() {
+    debug("lambda: select_next_node");
     for (auto& candidate : flatGraph) {
       if (U.find(candidate->moreData->id) == U.end()) {
 	if (!candidate->fivePrimeRead) { // no predecessors => all predecessors below current
+	  debug("lambda successfull");
 	  return candidate;
 	}
 	bool isgood(true);
@@ -80,10 +85,12 @@ void LinearPlot::assignLayers () {
 	  }
 	}
 	if (isgood) {
+	  debug("lambda successfull");
 	  return candidate;
 	}
       }
     }
+    debug("lambda successfull");
     return (p_read_t)nullptr; // no node found
   };
 
@@ -103,6 +110,7 @@ void LinearPlot::assignLayers () {
 }
 
 void LinearPlot::insertDummies () {
+  debug("LinearPlot::insertDummies");
   auto& lg = layeredGraph;
   for (auto& LL : lg) { // all layers in graph
     for (auto& node : LL.second) { // all nodes in layer
@@ -140,6 +148,7 @@ void LinearPlot::insertDummies () {
 
 
 std::vector<std::vector<bool>> LinearPlot::transitiveReduction () {
+  debug("LinearPlot::transitiveReduction");
   int N = flatGraph.size();
   auto& v = flatGraph;
   std::vector<std::vector<bool>> d(N, std::vector<bool>(N)); // connectivity array
@@ -211,6 +220,7 @@ std::vector<std::vector<bool>> LinearPlot::transitiveReduction () {
 
 
 void LinearPlot::barycenterCoords () {
+  debug("LinearPloat::barycenterCoords");
   auto& lg = layeredGraph;
   auto d = transitiveReduction(); // calculate reduced link matrix
 
@@ -219,7 +229,7 @@ void LinearPlot::barycenterCoords () {
     return a->moreData->c2 < b->moreData->c2; // weak ordering of y-coordinate c2
   };
   
-  int size0 = lg.begin()->second.size();  // number of elements on leftmost position
+  size_t size0 = lg.begin()->second.size();  // number of elements on leftmost position
   for (auto& LL : lg) { // for each layer
     for (auto el : LL.second) { // each node in layer
       // calculate barycenter of predecessors
@@ -247,7 +257,7 @@ void LinearPlot::barycenterCoords () {
     debug("Offset at layer #" + std::to_string(LL.first) + ": " + std::to_string(offset));
 
     // apply offset to all elements in layer
-    for (int i(0); i < LL.second.size(); ++i) {
+    for (size_t i(0); i < LL.second.size(); ++i) {
       LL.second.at(i)->moreData->c2 += offset;
       if (i > 0 && LL.second.at(i-1)->moreData->c2 == LL.second.at(i)->moreData->c2) {
 	offset += 2; // move elements on same y position apart
@@ -259,7 +269,7 @@ void LinearPlot::barycenterCoords () {
   
 #ifdef DEBUG
   for (auto& LL : layeredGraph) {
-    for (int i(0); i < LL.second.size(); ++i) {
+    for (size_t i(0); i < LL.second.size(); ++i) {
       std::cout << "Info: -- Layer #" << std::to_string(LL.first) << ", node #" << i << " y=" << LL.second.at(i)->moreData->c2 << std::endl;
     }
   }
@@ -287,7 +297,7 @@ void LinearPlot::createPlotCoords () {
     }
     br.w += llargest[i];
     debug("-- layer #" + std::to_string(i) + ": size " + std::to_string(llargest[i]));
-    br.h = (layeredGraph.at(i).size() > br.h) ? layeredGraph.at(i).size() : br.h;
+    br.h = ((int)layeredGraph.at(i).size() > br.h) ? layeredGraph.at(i).size() : br.h;
   }
   br.w += (layeredGraph.size() - 1) * dx;
   br.y = br.h / 2 * dy;
@@ -331,6 +341,7 @@ std::shared_ptr<Rect> LinearPlot::boundingRect() {
 
 
 void LinearPlot::addToSummary ( std::ostream& out, std::string title ) {
+  debug("LinearPlot::addToSummary");
   if (!assume(flatGraph.size() > 0, "LinaerPlot::addToSummary: Graph is empty, no summary will be written")) return;
   if (!assume(out.good(), "LinaerPlot::addToSummary: Could not write to output file")) return;
   out << title << "\t" << "an|";
@@ -347,6 +358,7 @@ void LinearPlot::addToSummary ( std::ostream& out, std::string title ) {
 
 
 void LinearPlot::writeEps ( const std::string& fileName ) {
+  debug("LinearPlot::writeEps");
   assignLayers();
   insertDummies();     // neccessary for correct placement
   barycenterCoords();
@@ -388,7 +400,7 @@ void LinearPlot::writeEps ( const std::string& fileName ) {
 	out << s*width << " " << xOffs + s*xpos << " " << yOffs + s*ypos << " exon\n";
 	node->flags |= ReadContainer::PROCESSED;
 
-	if (node->threePrimeRead) for (int i(0); i < node->threePrimeRead->size(); ++i) { // draw connection lines
+	if (node->threePrimeRead) for (size_t i(0); i < node->threePrimeRead->size(); ++i) { // draw connection lines
           auto& succ = node->threePrimeRead->at(i);
 	  if (succ && !(succ->flags & ReadContainer::DUMMY)) {
 	    int y2 = succ->moreData->c2;

@@ -13,7 +13,7 @@ include_directories(${QT_INCLUDES} ${CMAKE_CURRENT_BINARY_DIR})
 
 set(shared_sources genome.cpp readcontainer.cpp utils.cpp plotchromosome2.cpp vplot2.cpp linplot2.cpp)
 
-Set(CMAKE_CXX_FLAGS "-std=c++11 -DDEBUG -g -lm -fpermissive")
+Set(CMAKE_CXX_FLAGS "-std=c++11 -DDEBUG -g -Wall")
 
 #qt4_automoc(${shared_sources})
 add_library(shared_objects ${shared_sources})
@@ -32,4 +32,4 @@ add_executable(tests tests.cpp)
 target_link_libraries(tests ${QT_QTCORE_LIBRARY} ${QT_QTGUI_LIBRARY} shared_objects)
 
 
-#install(TARGETS chipboard RUNTIME DESTINATION bin)
+install(TARGETS chipboard-cli RUNTIME DESTINATION bin)

@@ -15,9 +15,9 @@
 #include <iostream>
 
 Genome::Genome ( bool init_m, bool init_c ) 
-  : readPos(new chr_map_t),
-    multistrand((init_m) ? new link_set_t : nullptr),
-    circular((init_c) ? new link_set_t : nullptr)
+  : multistrand((init_m) ? new link_set_t : nullptr),
+    circular((init_c) ? new link_set_t : nullptr),
+    readPos(new chr_map_t)
 {
 }
 
@@ -178,7 +178,7 @@ bool Genome::parseDataLine ( const std::string& line ) {
 	case 'X': // start of current split
 	  start = atoi( (*iter).substr(5).c_str() );
 	  break;
-	case 'Y': // enf of current split
+	case 'Y': // end of current split
 	  end = atoi( (*iter).substr(5).c_str() );
 	  break;
 	case 'Q': // number of current split
@@ -206,6 +206,9 @@ bool Genome::parseDataLine ( const std::string& line ) {
 	}
       }
     }
+    
+//    assume(start != end, "Read with length 0 detected");
+    if (start == end);
     
     pos3 = pos5 + calcLength(tokens[CIGAR]);
     p_read_t rc = getReadAt(chr, pos5);

@@ -35,12 +35,12 @@ void printUsage (char** args) {
   cout << 
 "\n"
 "\n"
-"Usage: \n    " << args[0] << " -c|m|p chr:pos -f <path-to-file> [-r WxH] [-o <filename>]\n"; 
+"Usage: \n    " << args[0] << " -c|m|p <chr:pos> -f <path-to-file> [-r WxH] [-o <[path/]filename>] [-s <[path/]filename>]\n" 
 "\n"
-"Arguments:\n"
+"Optional:\n"
 "    -h            print this help and exit\n"
 // "    -r WxH        set output width and height in pixels (won't affect vector graphics)\n"
-"    -o filename   set output file name (.eps)\n"
+"    -o filename   set output path and filename\n"
 "    -s filename   print summary to file\n"
 "At least one required:\n"
 "    -c            detect all circular transcripts (not implemented yet)\n"
@@ -48,7 +48,7 @@ void printUsage (char** args) {
 "    -p chr:pos    find all transcripts on chromosome chr, position pos\n"
 "                  (multiple -p chr:pos allowed)\n"
 "Required:\n"
-"    -f filename   path to segemehl-generated .sam file\n\n";
+"    -f filename   path to segemehl-generated .sam input file\n\n";
 }
 
 
@@ -136,7 +136,7 @@ int main ( int argc, char** argv ) {
   if (options.reportFileName != "") {
     report = new ofstream(options.reportFileName);
     if (assume(report->good(), "Couldn't create file for report, reports will be skipped, warnings will be shown.")) {
-      *report << "input_file\t" << "chromosome_positions\t" << "min_read_depth\t" << "max_read_depth\n";
+      *report << "filename_event\t" << "chromosome_positions\t" << "min_read_depth\t" << "max_read_depth\n";
     }
   }
   
@@ -177,7 +177,7 @@ int main ( int argc, char** argv ) {
     for (auto& tpl : options.reads) {
       shared_ptr<vPlot> plot(new LinearPlot(40, 20));
       auto seed = g->getReadAt(tpl.first, tpl.second);
-      if (seed != nullptr & !(seed->flags & ReadContainer::PROCESSED)) { // only existing, new plots
+      if (seed != nullptr && !(seed->flags & ReadContainer::PROCESSED)) { // only existing, new plots
 	LinearPlot plot;
  	plot.fromRead(seed, g);
 	plot.writeEps(options.outFileName + "_pos_" + to_string(++N) + ".eps");

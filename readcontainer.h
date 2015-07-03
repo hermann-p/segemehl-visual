@@ -36,8 +36,8 @@ public:
   void addDownstreamRead( const Genome& genome, const chr_num_t chr, const chr_pos_t pos );
   friend std::ostream& operator<<( std::ostream& output, ReadContainer& rc );
 
-  link_list_t* fivePrimeRead;
   link_list_t* threePrimeRead;
+  link_list_t* fivePrimeRead;
   std::vector<unsigned short>* threePrimeRefs;
   chr_num_t chromosome;
   chr_pos_t fivePrimeEnd;

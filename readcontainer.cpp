@@ -63,7 +63,7 @@ void ReadContainer::addUpstreamRead ( const Genome& genome, const chr_num_t chr,
 
     // check if this is a multistrand splice junction
     if (genome.multistrand != nullptr &&
-	(upstr->chromosome != chromosome || upstr->flags & MULTISTRAND == MULTISTRAND)) {
+	(upstr->chromosome != chromosome || (upstr->flags & MULTISTRAND) == MULTISTRAND)) {
       upstr->flags |= MULTISTRAND;
       flags |= MULTISTRAND;
       genome.multistrand->insert(shared_from_this());
@@ -120,12 +120,12 @@ ReadContainer::ReadContainer ( )
 
 
 ReadContainer::ReadContainer ( const chr_num_t chromosome, const chr_pos_t p5, const short int len ) :
-  chromosome(chromosome),
-  fivePrimeEnd(p5),
-  threePrimeEnd(p5 + len),
   threePrimeRead(nullptr),
   fivePrimeRead(nullptr),
   threePrimeRefs(nullptr),
+  chromosome(chromosome),
+  fivePrimeEnd(p5),
+  threePrimeEnd(p5 + len),
   flags(0),
   moreData(nullptr)
 {
