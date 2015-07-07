@@ -157,11 +157,17 @@ std::vector<std::vector<bool>> LinearPlot::transitiveReduction () {
   std::queue<p_read_t> q;
   q.push(v[0]);
 
+  // All nodes are flagged "processed" from ::fromRead function => toggle "processed" flag
+  // off for processed elements
   while (!q.empty()) {
+    debug(std::to_string(q.size()) + " elements in queue...");
     auto node = q.front();
     q.pop();
+    if (!(node->flags & ReadContainer::PROCESSED)) { // guardian: skip elements pushed by multiple others
+      continue;
+    }
     auto i = node->moreData->id;
-    
+
     node->flags ^= ReadContainer::PROCESSED;
     if (node->threePrimeRead) for (auto n : *node->threePrimeRead) {
 	if (n->flags & ReadContainer::PROCESSED) {
