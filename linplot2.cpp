@@ -20,7 +20,6 @@ LinearPlot::LinearPlot ( int dx, int dy )
 
 
 void LinearPlot::fromRead ( p_read_t seed, Genome* genome ) {
-  debug("LinearPlot::fromRead");
   if (seed->flags & ReadContainer::PROCESSED) {
     return;
   } // guardian
@@ -64,18 +63,15 @@ void LinearPlot::fromRead ( p_read_t seed, Genome* genome ) {
 
 
 void LinearPlot::assignLayers () {
-  debug("LinearPlot::assignLayers");
   std::unordered_set<uint> U;  // ids of assigned nodes
   std::unordered_set<uint> Z;  // ids of nodes assigned below current layer
   int current(1);
 
   // lambda to select next unassigned node with all known predecessors below current
   auto select_next_node = [&]() {
-    debug("lambda: select_next_node");
     for (auto& candidate : flatGraph) {
       if (U.find(candidate->moreData->id) == U.end()) {
 	if (!candidate->fivePrimeRead) { // no predecessors => all predecessors below current
-	  debug("lambda successfull");
 	  return candidate;
 	}
 	bool isgood(true);
@@ -85,12 +81,10 @@ void LinearPlot::assignLayers () {
 	  }
 	}
 	if (isgood) {
-	  debug("lambda successfull");
 	  return candidate;
 	}
       }
     }
-    debug("lambda successfull");
     return (p_read_t)nullptr; // no node found
   };
 
@@ -110,7 +104,6 @@ void LinearPlot::assignLayers () {
 }
 
 void LinearPlot::insertDummies () {
-  debug("LinearPlot::insertDummies");
   auto& lg = layeredGraph;
   for (auto& LL : lg) { // all layers in graph
     for (auto& node : LL.second) { // all nodes in layer
@@ -148,7 +141,6 @@ void LinearPlot::insertDummies () {
 
 
 std::vector<std::vector<bool>> LinearPlot::transitiveReduction () {
-  debug("LinearPlot::transitiveReduction");
   int N = flatGraph.size();
   auto& v = flatGraph;
   std::vector<std::vector<bool>> d(N, std::vector<bool>(N)); // connectivity array
@@ -226,7 +218,6 @@ std::vector<std::vector<bool>> LinearPlot::transitiveReduction () {
 
 
 void LinearPlot::barycenterCoords () {
-  debug("LinearPloat::barycenterCoords");
   auto& lg = layeredGraph;
   auto d = transitiveReduction(); // calculate reduced link matrix
 
@@ -347,13 +338,17 @@ std::shared_ptr<Rect> LinearPlot::boundingRect() {
 
 
 void LinearPlot::addToSummary ( std::ostream& out, std::string title ) {
-  debug("LinearPlot::addToSummary");
-  if (!assume(flatGraph.size() > 0, "LinaerPlot::addToSummary: Graph is empty, no summary will be written")) return;
+  if (!assume(flatGraph.size() > 0, "LinearPlot::addToSummary: Graph is empty, no summary will be written")) return;
   if (!assume(out.good(), "LinaerPlot::addToSummary: Could not write to output file")) return;
   out << title << "\t" << "an|";
-  int n(flatGraph.size());
-  for (int i(0); i < n; ++i) {
+  int n(flatGraph.size());                    // keep track of commas in output
+  for (int i(n-1); i >= 0; --i) {              // traverse backwards because dummys are at the end
     auto& node = flatGraph.at(i);
+    if (node->flags & ReadContainer::DUMMY) { // guardian: skip dummy nodes
+      --n;                                    // skipped node => decrease commas
+      debug("Now printing no more than " + std::to_string(n-1) + " commas");
+      continue;
+    }
     out << "chr" << genome->getChrName(node->chromosome) << ":" << node->fivePrimeEnd << "-" << node->threePrimeEnd;
     if (i < n - 1) {
       out << ",";
@@ -364,7 +359,6 @@ void LinearPlot::addToSummary ( std::ostream& out, std::string title ) {
 
 
 void LinearPlot::writeEps ( const std::string& fileName ) {
-  debug("LinearPlot::writeEps");
   assignLayers();
   insertDummies();     // neccessary for correct placement
   barycenterCoords();
