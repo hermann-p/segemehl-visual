@@ -11,6 +11,7 @@
 #define LOCKFREEQUEUE
 
 #include <atomic>
+#include <thread>
 
 template <class T>
 class LockFreeQueue {
@@ -67,7 +68,8 @@ void LockFreeQueue<T>::push ( const T& data ) {
 
 template <class T>
 bool LockFreeQueue<T>::pop ( T& dest ) {
-  while (!done_ && divider == tail);  // no elements, but elements expected: wait for element
+  while (!done_ && divider == tail)
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));  // no elements, but elements expected: wait for element
   if (divider != tail) {           // if unconsumed elements exist...
     Node* div = divider.load();    // load atomic state
     dest = div->next->value;

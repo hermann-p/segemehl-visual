@@ -37,6 +37,7 @@ Genome::~Genome() {
 }
 
 
+// returns the internal id of a chromosome with given name string
 chr_num_t Genome::getChrNum ( const std::string name ) const {
   auto lookup = chrNums.find(name);
   assume(lookup != chrNums.end(), "Genome::getChrNum: Chromosome " + name + " not found");
@@ -44,6 +45,7 @@ chr_num_t Genome::getChrNum ( const std::string name ) const {
 }
 
 
+// returns the string name for a chromosome's given internal id
 std::string Genome::getChrName ( const chr_num_t num ) const {
   assume(!chrNames.empty(), "Genome::getChrName: name list empty");
   assume(num < chrNames.size(),
@@ -52,12 +54,15 @@ std::string Genome::getChrName ( const chr_num_t num ) const {
   return chrNames[num];
 }
 
+
+// returns the length of a specific chromosome
 short unsigned int Genome::getLength ( const chr_num_t n ) const {
   //  assume(n < chrLens.size(), "Genome::getLength: index out of range " + std::to_string(n));
   return chrLens.at(n);
 }
 
 
+// create a new chromosome and add it to appropriate lists
 void Genome::createChromosome ( const std::string name, const uint32_t length ) {
   chr_num_t N = chrNames.size();
   chrNames.push_back(name);
@@ -67,16 +72,18 @@ void Genome::createChromosome ( const std::string name, const uint32_t length ) 
 }
 
 
-p_read_t Genome::createRead( const chr_num_t chr, const chr_pos_t pos, const short len ) {
+// creates a new read and registers it with the genome map
+/*p_read_t Genome::createRead( const chr_num_t chr, const chr_pos_t pos, const short len ) {
   p_read_t rc = getReadAt(chr, pos);
   if (rc == nullptr) {                      // no read on chr:pos exists yet
     rc = std::make_shared<ReadContainer>(chr, pos, len);
     readPos->at(chr)->emplace(pos, rc);          // register read with genome navigation map
   }
   return rc;
-}
+}*/
 
 
+// searches for an existing read by internal chromosome id and position
 p_read_t Genome::getReadAt ( const chr_num_t chr, const chr_pos_t pos ) const {
   auto chromosome = readPos->at(chr);
   auto lookup = chromosome->find(pos);
@@ -87,11 +94,15 @@ p_read_t Genome::getReadAt ( const chr_num_t chr, const chr_pos_t pos ) const {
 }
 
 
+// allows to search for an existing read by chromosome name and position
 p_read_t Genome::getReadAt ( const std::string chr, const chr_pos_t pos ) const {
   return getReadAt( getChrNum(chr), pos );
 }
 
 
+// parses an input stream linewise for data
+// uses separate threads for reading&tokenizing and reassembly
+// backend called by all other implementations of read()
 void Genome::read ( std::ifstream& input ) {
   log("Genome: reading file...");
   unsigned int L(1);                         // line counter
@@ -123,6 +134,9 @@ void Genome::read ( std::ifstream& input ) {
       assume(parseHeaderLine(line), "Could not parse header in line " + std::to_string(L), false);
     }
     else {
+      // process current data line, else it would get lost
+      auto tokens = strsplit(line, "\t");
+      parseDataLine(tokens);
       break;  // header lines parsed, break and begin threaded processing
     }
     L++;
@@ -146,6 +160,7 @@ void Genome::read ( std::ifstream& input ) {
 }
 
 
+// opens a stream to input file of given name and tries to read it
 void Genome::read ( std::string& fileName ) {
   std::ifstream input(fileName);
   assume(input.good(), "Could not open file: " + fileName);
@@ -153,12 +168,14 @@ void Genome::read ( std::string& fileName ) {
 }
 
 
+// reads a genome from an existing input stream
 std::ifstream& operator >> ( std::ifstream& input, Genome& target ) {
   target.read(input);
   return input;
 }
 
 
+// extracts information from a header string
 bool Genome::parseHeaderLine ( const std::string& line ) {
   try {
     switch (line[1]) {
@@ -186,6 +203,7 @@ bool Genome::parseHeaderLine ( const std::string& line ) {
 }
 
 
+// extracs read data from a tokenized line to reassemble RNA
 bool Genome::parseDataLine ( std::vector<std::string>& tokens ) {
 //   auto tokens = strsplit(line, "\t");
     unsigned char flags  = 0;
@@ -198,25 +216,26 @@ bool Genome::parseDataLine ( std::vector<std::string>& tokens ) {
     bool hasPrev = false;
     chr_num_t prevChr = 0;
     chr_pos_t prevPos = 0;
-    int start = 0;
-    int end = 0;
+/*    int start = 0;
+    int end = 0; */
 
     auto iter = tokens.begin();
-    for (int i(0); i < QUAL; i++) iter++;
-    for (;iter != tokens.end(); iter++) {
-      if ((*iter)[0] == 'X') {
+    for (int i(0); i < QUAL; i++) iter++;             // skip default SAM tags
+    for (;iter != tokens.end(); iter++) {             // iterate through custom tags
+      if ((*iter)[0] == 'X') {                        // segemehl's tags start with X
 	if ((*iter)[2] != ':' || (*iter)[4] != ':') { // doesn't suffice Xx:y:z, e. g. PHRED-String starting with X
 	  continue;
-	}
+	}  // guardian to filter non-segemehl tags starting with X
 	switch((*iter)[1]) {
-	case 'X': // start of current split
+/*	You can't trust start and end information to be set correctly - segemehl error?
+ * 	case 'X': // start of current split
 	  start = atoi( (*iter).substr(5).c_str() );
 	  break;
 	case 'Y': // end of current split
 	  end = atoi( (*iter).substr(5).c_str() );
-	  break;
+	  break; */
 	case 'Q': // number of current split
-	  flags |= ReadContainer::SPLIT;
+	  flags |= ReadContainer::SPLIT;              // read consists of multiple splits
 	  break;
 	  
 	case 'P': // refseq of prev split
@@ -241,11 +260,11 @@ bool Genome::parseDataLine ( std::vector<std::string>& tokens ) {
       }
     }
 
-    if (start == end);
+//    if (start == end);
     
-    pos3 = pos5 + calcLength(tokens[CIGAR]);
+    pos3 = pos5 + calcLength(tokens[CIGAR]); // recalculate original position on chromosomes by undoing assumed indels 
     p_read_t rc = getReadAt(chr, pos5);
-    if (rc == nullptr) {
+    if (rc == nullptr) {                     // no read found yet
       rc = std::make_shared<ReadContainer>(chr, pos5, pos3-pos5);
       registerRead(rc);
       rc->flags |= flags;
@@ -260,11 +279,16 @@ bool Genome::parseDataLine ( std::vector<std::string>& tokens ) {
   return true;
 }
 
+
+// store created read in chromosome map
 void Genome::registerRead (  p_read_t rc ) {
   const chr_num_t chr = rc->chromosome;
   readPos->at(chr)->emplace(rc->fivePrimeEnd, rc);   // Link 5' end to identify as successor
   readPos->at(chr)->emplace(-rc->threePrimeEnd, rc); // Link 3' end to identify as predecessor
 }
+
+
+// create original size of the read, before matching algorithm added indels
 uint Genome::calcLength ( const std::string cigar ) const {
   int L = 0;
   std::string tmp = "";
@@ -283,5 +307,3 @@ uint Genome::calcLength ( const std::string cigar ) const {
   }
   return (uint)L;
 }
-
-

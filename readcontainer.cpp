@@ -29,6 +29,7 @@ short int ReadContainer::length() const {
   return threePrimeEnd - fivePrimeEnd;
 }
 
+
 void ReadContainer::addDownstreamRead ( const Genome& genome, const chr_num_t chr, const chr_pos_t pos ) {
   auto dnstr = genome.getReadAt(chr, pos);
   if (dnstr != nullptr) {
@@ -73,14 +74,14 @@ void ReadContainer::addUpstreamRead ( const Genome& genome, const chr_num_t chr,
     int link = findLink(upstr, false); // search link  upstr <= this
     int backLink = upstr->findLink(shared_from_this()); // search link upstr => this
 
-    if (link == -1) { // upstr <= this unknown yet
+    if (link == -1) {    // upstr <= this unknown yet
       fivePrimeRead->push_back(upstr);
     }
 
     if (backLink >= 0) { // upstr => this known
       upstr->threePrimeRefs->at(backLink)++;
     }
-    else { // upstr => this new
+    else {               // upstr => this new
       upstr->threePrimeRead->push_back(shared_from_this());
       upstr->threePrimeRefs->push_back(1);
     }
@@ -116,7 +117,6 @@ ReadContainer::ReadContainer ( )
   moreData(nullptr)
 {
 }
-
 
 
 ReadContainer::ReadContainer ( const chr_num_t chromosome, const chr_pos_t p5, const short int len ) :
