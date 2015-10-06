@@ -1,0 +1,9 @@
+set yrange [0:12000];
+set xlabel "Data size (GiB)";
+set ylabel "Time (s)";
+set terminal png;
+set output "times.png";
+plot "times.csv" using 1:2 title "no optimisation" with lines, \
+"times.csv" using 1:2 title "", \
+"times.csv" using 1:3 title "optimisation level 2" with lines, \
+"times.csv" using 1:3 title "";

@@ -6,6 +6,7 @@
 
 #include <memory>
 #include <fstream>
+#include <functional>
 
 class vPlot {
  public:
@@ -48,7 +49,7 @@ class vPlot {
   uint minLinks;
   uint maxLinks;
   
- protected:
+ protected:   
   int __N;
 
   int exonCount ();

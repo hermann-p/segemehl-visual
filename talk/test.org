@@ -1,0 +1,3 @@
+#+author: testauthor
+#+title: some document
+#+email: me & someone, /strange things/, bla

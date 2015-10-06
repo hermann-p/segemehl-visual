@@ -7,6 +7,7 @@
 #include <map>
 #include <unordered_map>
 #include <memory>
+#include <limits>
 
 #include <iostream>
 
@@ -46,8 +47,10 @@ void ReadContainer::addDownstreamRead ( const Genome& genome, const chr_num_t ch
       threePrimeRead->push_back(dnstr);
       threePrimeRefs->push_back(1);
     }
-    else { // this => dnstr known
-      threePrimeRefs->at(link)++;
+    else {            // this => dnstr known; increment read depth
+      if (threePrimeRefs->at(link) < std::numeric_limits<depth_counter_t>::max()) {
+	threePrimeRefs->at(link)++;
+      }
     }
     if (backLink == -1) { // this <= dnstr unknown yet
       dnstr->fivePrimeRead->push_back(shared_from_this());
@@ -65,10 +68,8 @@ void ReadContainer::addUpstreamRead ( const Genome& genome, const chr_num_t chr,
     // check if this is a multistrand splice junction
     if (genome.multistrand != nullptr &&
 	(upstr->chromosome != chromosome || (upstr->flags & MULTISTRAND) == MULTISTRAND)) {
-      upstr->flags |= MULTISTRAND;
       flags |= MULTISTRAND;
       genome.multistrand->insert(shared_from_this());
-      genome.multistrand->insert(upstr);
     }
     
     int link = findLink(upstr, false); // search link  upstr <= this
@@ -79,7 +80,9 @@ void ReadContainer::addUpstreamRead ( const Genome& genome, const chr_num_t chr,
     }
 
     if (backLink >= 0) { // upstr => this known
-      upstr->threePrimeRefs->at(backLink)++;
+      if (upstr->threePrimeRefs->at(backLink) < std::numeric_limits<depth_counter_t>::max()) {
+	upstr->threePrimeRefs->at(backLink)++;
+      } // avoid overflow
     }
     else {               // upstr => this new
       upstr->threePrimeRead->push_back(shared_from_this());
@@ -92,7 +95,7 @@ void ReadContainer::addUpstreamRead ( const Genome& genome, const chr_num_t chr,
 int ReadContainer::findLink ( std::shared_ptr<ReadContainer> partner, const bool downstream ) {
   if (downstream && threePrimeRead == nullptr) {
     threePrimeRead = new link_list_t;
-    threePrimeRefs = new std::vector<unsigned short>;
+    threePrimeRefs = new std::vector<depth_counter_t>;
     return -1;
   }
   else if (!downstream && fivePrimeRead == nullptr) {
@@ -113,6 +116,9 @@ ReadContainer::ReadContainer ( )
 : threePrimeRead(nullptr),
   fivePrimeRead(nullptr),
   threePrimeRefs(nullptr),
+  chromosome(-1),
+  fivePrimeEnd(0),
+  threePrimeEnd(0),
   flags(0),
   moreData(nullptr)
 {

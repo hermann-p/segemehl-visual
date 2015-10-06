@@ -1,0 +1,80 @@
+* Create linear plot - BFS
+
+#+BEGIN_SRC shell
+function bfs(node, x, y)
+  draw_node(node)
+
+  ny = y - node.num_successors / 2
+  for succ in node.successors
+  do
+    if not succ.visited then
+      draw_connection(node, succ)
+      bfs(succ, x+1, ny)
+    fi
+    ++ny
+  done
+
+  node.visited = true
+
+  ny = y - node.num_predecessors / 2
+  for pred in node.predecessors
+  do
+    if not pred.visited then
+      bfs(pred, x-1, ny)
+    fi
+    ++ny
+  done
+end
+
+#+END_SRC
+
+
+#+BEGIN_SRC cpp
+
+void LinearPlot::fromRead ( std::shared_ptr<ReadContainer> seed, Genome* g, const int x, const int y, std::shared_ptr<Exon> pred, const int nLinks ) {
+  int len = seed->length();
+  int x1 = x - len / 2;
+  int x2 = x + len / 2;
+  std::shared_ptr<Exon> exon(new Exon({x1, x2, y, nextID, seed->chromosome}));
+  if (pred != nullptr && nLinks >= nFilter) {  // not the initial seed
+    LineEnds le = {exon, pred, nLinks};                // parent line positions with exons
+    connections.push_back(le);
+    auto chr = addChromosome(g, seed->chromosome); // pick or create
+    chr->addExon(seed->fivePrimeEnd, seed->threePrimeEnd);
+  }
+  positions.push_back(exon);
+  nextID = (++nextID <= 'z') ? nextID : 'A'; // count up and check if in range
+
+  if (seed->fivePrimeRead != nullptr) {      // process predecessors
+    int y0 = y - (seed->fivePrimeRead->size() / 2) * dy;
+    if (seed->fivePrimeRead->size() % 2 == 0) {
+      y0 += dy/2;
+    }
+    for (auto& ex : *(seed->fivePrimeRead)) {
+      if (!(ex->flags & ReadContainer::PROCESSED)) {
+	int x1 =   x - dx - (len + ex->length()) / 2;
+	fromRead(ex, g, x1, y0, nullptr);
+      }
+      y0 += dy;
+    }
+  }
+
+  seed->flags |= ReadContainer::PROCESSED;
+
+  if (seed->threePrimeRead != nullptr) {     // process successors
+    int y0 = y - (seed->threePrimeRead->size() / 2) * dy;
+    if (seed->threePrimeRead->size() % 2 == 0) {
+      y0 += dy/2;
+    }
+    for (int i(0); i < seed->threePrimeRead->size(); ++i) {
+      auto ex = seed->threePrimeRead->at(i);
+      if (!(ex->flags & ReadContainer::PROCESSED)) {
+	int x1 = x + dx + (len + ex->length()) / 2;
+	fromRead(ex, g, x1, y0, exon, seed->threePrimeRefs->at(i));
+      }
+      y0 += dy;
+    }
+  }
+}
+
+#+END_SRC

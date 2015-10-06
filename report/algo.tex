@@ -1,0 +1,79 @@
+% Created 2015-02-19 Thu 16:09
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{fixltx2e}
+\usepackage{graphicx}
+\usepackage{longtable}
+\usepackage{float}
+\usepackage{wrapfig}
+\usepackage{rotating}
+\usepackage[normalem]{ulem}
+\usepackage{amsmath}
+\usepackage{textcomp}
+\usepackage{marvosym}
+\usepackage{wasysym}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\tolerance=1000
+\usepackage{droid}
+\date{\today}
+\title{algo}
+\hypersetup{
+  pdfkeywords={},
+  pdfsubject={},
+  pdfcreator={Emacs 24.4.1 (Org mode 8.2.10)}}
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+
+\section{Create linear plot - BFS}
+\label{sec-1}
+
+\begin{verbatim}
+function bfs(node, x, y)
+  draw_node(node)
+
+  ny = y - node.num_successors / 2
+  for succ in node.successors
+  do
+    if not succ.visited then
+      draw_connection(node, succ)
+      bfs(succ, x+1, ny)
+    fi
+    ++ny
+  done
+
+  node.visited = true
+
+  ny = y - node.num_predecessors / 2
+  for pred in node.predecessors
+  do
+    if not pred.visited then
+      bfs(pred, x-1, ny)
+    fi
+    ++ny
+  done
+end
+\end{verbatim}
+
+\subsection{Data Nodes}
+\label{sec-1-1}
+
+\begin{itemize}
+\item length
+\item layer
+\item chromosome
+\end{itemize}
+
+\subsection{Adjacency array}
+\label{sec-1-2}
+
+\begin{itemize}
+\item $0$: not connected
+\item $n$: link depth
+\end{itemize}
+% Emacs 24.4.1 (Org mode 8.2.10)
+\end{document}

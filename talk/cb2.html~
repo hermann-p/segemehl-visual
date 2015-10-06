@@ -1,0 +1,391 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Visualisation of <i>segemehl</i> output</title>
+<meta name="author" content="(Hermann Pauly)"/>
+
+<link rel="stylesheet" href="./reveal.js/css/reveal.min.css"/>
+<link rel="stylesheet" href="./reveal.js/css/theme/simple.css" id="theme"/>
+
+<!-- If the query includes 'print-pdf', include the PDF print sheet -->
+<script>
+    if( window.location.search.match( /print-pdf/gi ) ) {
+        var link = document.createElement( 'link' );
+        link.rel = 'stylesheet';
+        link.type = 'text/css';
+        link.href = './reveal.js/css/print/pdf.css';
+        document.getElementsByTagName( 'head' )[0].appendChild( link );
+    }
+</script>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+<section>
+<h1>Visualisation of <i>segemehl</i> output</h1>
+<h2>Hermann Pauly</h2>
+<h2><a href="mailto:"></a></h2>
+<h2>20-01-2015</h2></section>
+
+<section>
+<section id="sec-1" >
+
+<h2>Introduction</h2>
+<ul class="org-ul">
+<li><i>segemehl</i>: alignment tool for NGS
+</li>
+<li>can map strand switching and circular events
+</li>
+<li>no software to plot output yet
+</li>
+</ul>
+
+</section>
+<section id="sec-1-1" >
+
+<h3>Goal</h3>
+<ul class="org-ul">
+<li>tool to 
+<ul class="org-ul">
+<li>visualise <i>segemehl</i> mappings
+</li>
+<li>treat large files
+</li>
+<li>select &amp; filter
+</li>
+</ul>
+</li>
+</ul>
+</section>
+
+</section>
+<section>
+<section id="sec-2" >
+
+<h2>Materials and methods</h2>
+<ul class="org-ul">
+<li>graph theory
+</li>
+<li>on-screen and file output
+</li>
+<li>C++, Qt4, postscript
+</li>
+</ul>
+
+</section>
+<section id="sec-2-1" >
+
+<h3>Used data</h3>
+<ul class="org-ul">
+<li>test data
+<ul class="org-ul">
+<li>simulated chromosomes
+</li>
+<li>manually created RNA-reads
+</li>
+<li>re-mapped with <i>segemehl</i>
+</li>
+</ul>
+</li>
+<li>real data
+<ul class="org-ul">
+<li>RNA sequences of human skin cells
+</li>
+<li>already mapped by <i>segemehl</i>
+</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section id="sec-2-2" >
+
+<h3>Input file format</h3>
+<pre class="example">
+&lt;header-section&gt;
+@HD     VN:1.0
+@SQ     SN:A    LN:1000
+@SQ     SN:B    LN:1000
+@PG     ID:segemehl     &lt;info-string on program call&gt;
+&lt;data-section&gt;
+qname   flag    rname   pos     qual    cigar   rnext   tlen    seq     VAR
+readA   0       chr1    123     255     99M1D           98      AATC... XY:
+</pre>
+
+<ul class="org-ul">
+<li><i>.sam</i> files: known &amp; widespread
+</li>
+<li>human readable
+</li>
+<li>tab seperated
+</li>
+<li><b>=&gt; tokenize strings, read info</b>
+</li>
+</ul>
+
+</section>
+<section id="sec-2-3" >
+
+<h3><i>segemehl</i> matching tags</h3>
+<pre class="example">
+XX:i:40 XY:i:73 XQ:i:1 XP:Z:A XU:i:39 XS:i:64 XC:Z:B XV:i:356 XT:i:32
+</pre>
+
+<ul class="org-ul">
+<li>gives multisplit information
+<ul class="org-ul">
+<li>predecessor position &amp; direction (strand switch)
+</li>
+<li>successor position &amp; direction
+</li>
+<li>number of this split (-&gt; circular)
+</li>
+</ul>
+</li>
+<li>in VAR section
+<ul class="org-ul">
+<li>no defined position
+</li>
+<li>mixed with other information
+</li>
+<li><b>=&gt; process all tokens</b>
+</li>
+</ul>
+</li>
+</ul>
+</section>
+
+</section>
+<section>
+<section id="sec-3" >
+
+<h2>Data structures</h2>
+<p>
+Consider each read as tree or subtree
+</p>
+
+</section>
+<section id="sec-3-1" >
+
+<h3>RNA read as graph</h3>
+<img src="./cb2/step2_1000.png" alt="step2_1000.png" />
+
+
+</section>
+<section id="sec-3-2" >
+
+<h3>n/m links for isotypes</h3>
+<img src="./cb2/step4_1000.png" alt="step4_1000.png" />
+
+</section>
+<section id="sec-3-3" >
+
+<h3>Distributed subgraphs</h3>
+<img src="./cb2/mix_1000.png" alt="mix_1000.png" />
+
+</section>
+<section id="sec-3-4" >
+
+<h3>Chromosomes as Anchors</h3>
+<img src="./cb2/full_1000.png" alt="full_1000.png" />
+</section>
+
+</section>
+<section>
+<section id="sec-4" >
+
+<h2>Results</h2>
+<pre class="example">
+&gt; 11:24 rhskl5 ~/data$ time chipboard-cli -mf SRR403880_R1_2_scoreP64.sam
+&gt; Options successfully set
+&gt; Genome: reading file...
+&gt; @HD     VN:1.0
+&gt;
+&gt; @PG     ID:segemehl     VN:0.1.7-$Rev: 411 $ ($Date: 2014-06-18 08:38:48 
+&gt; -0400 (Wed, 18 Jun 2014) $) CL:/home/evm14888/Programs/segemehl_0_1_9/
+&gt; segemehl/segemehl.x -q left_SRR403880_R1_2_scoreP64.fastq -p 
+&gt; right_SRR403880_R1_2_scoreP64.fastq -d /nfs/compdiag/user/evm14888/
+&gt; ref_genomes/hsa19.fa -i /nfs/compdiag/user/evm14888/ref_genomes/hsa19.
+&gt; segemehl.idx -S -t 24 -o segemehl/SRR403880_R1_2_scoreP64.sam
+&gt;
+&gt; Found 3090902 strand switching events
+&gt;
+&gt; real    193m16.501s
+&gt; user    190m46.959s
+&gt; sys     2m6.996s
+</pre>
+
+</section>
+<section id="sec-4-1" >
+
+<h3>Multisplit plot</h3>
+<p>
+<img src="./cb2/snapshot1.png" alt="snapshot1.png" />
+(test data, 3' -&gt; 5')
+</p>
+
+</section>
+<section id="sec-4-2" >
+
+<h3>Profiling</h3>
+<pre class="example">
+index % time    self  children    called     name
+                                                 &lt;spontaneous&gt;
+[1]     97.6    0.00    3.27                 main [1]
+[2]     96.9    0.00    3.24       1         Genome::read(std::string&amp;) [2]
+[3]     96.9    0.01    3.23       1         Genome::read(std::basic_ifs...
+[4]     84.2    0.08    2.74  199914         Genome::parseDataLine(std::...
+-----------------------------------------------
+                0.00    0.00     253/200167      Genome::parseHeaderLine...
+                0.05    1.66  199914/200167      Genome::parseDataLine(s...
+[5]     51.1    0.05    1.66  200167         strsplit(std::string, std::...
+                0.06    1.04 3579101/3579185     std::vector&lt;std::string...
+                0.00    0.24  200167/200167      std::vector&lt;std::string...
+                0.03    0.09  200167/200167      std::unique_ptr&lt;std::ve...
+                0.04    0.07 3779268/3779268     bool std::operator!=&lt;ch...
+                0.03    0.04 3579101/3579101     std::unique_ptr&lt;std::ve...
+                0.00    0.03  200167/200167      std::unique_ptr&lt;std::ve...
+                0.00    0.00  200167/200167      std::unique_ptr&lt;std::ve...
+                0.00    0.00  200167/200168      std::vector&lt;std::string...
+</pre>
+</section>
+
+</section>
+<section>
+<section id="sec-5" >
+
+<h2>Problems and outlook</h2>
+<img src="./cb2/roadmap.png" alt="roadmap.png" />
+
+</section>
+<section id="sec-5-1" >
+
+<h3>Problems</h3>
+<ul class="org-ul">
+<li>memory: graph of 40+ GiB input files
+</li>
+<li>data not ordered
+</li>
+<li>Qt4 file printing surprisingly bad
+</li>
+</ul>
+
+</section>
+<section id="sec-5-2" >
+
+<h3>To do / planned</h3>
+<ul class="org-ul">
+<li>visuals
+<ul class="org-ul">
+<li>include strandiness information
+</li>
+<li>shortened chromosome displays
+</li>
+<li>more information
+</li>
+</ul>
+</li>
+<li>function
+<ul class="org-ul">
+<li>more filtering
+</li>
+<li>circular elements
+</li>
+<li>graphical interface
+</li>
+<li>more input formats
+</li>
+<li>include genomic annotation
+</li>
+</ul>
+</li>
+</ul>
+
+</section>
+<section id="sec-5-3" >
+
+<h3>Thank you</h3>
+</section>
+
+</section>
+<section>
+<section id="sec-6" >
+
+<h2>Sources</h2>
+<ul class="org-ul">
+<li><a href="https://samtools.github.io/hts-specs/SAMv1.pdf">Sam file format specification</a>
+</li>
+<li><a href="http://www.bioinf.uni-leipzig.de/Software/segemehl/"><i>segemehl</i> manual</a>
+</li>
+<li>Skin differetiation data: Kretz et al.: <a href="http://genesdev.cshlp.org/content/26/4/338.full?sid=10fa6d9d-b3b3-41dd-8988-a32e531bda67"><i>Suppression of progenitor differentiation requires the long noncoding RNA ANCR</i></a>, Genes and Development, 2014
+</li>
+</ul>
+</section>
+
+</section>
+<section>
+<section id="sec-7" >
+
+<h2>strsplit()</h2>
+<div class="org-src-container">
+
+<pre  class="src src-c++"><span style="color: #228b22;">vector</span>&lt;<span style="color: #228b22;">string</span>&gt; <span style="color: #0000ff;">strsplit</span> ( <span style="color: #228b22;">string</span>&amp; <span style="color: #a0522d;">input</span>, <span style="color: #228b22;">string</span>&amp; <span style="color: #a0522d;">delim</span>, <span style="color: #228b22;">bool</span> <span style="color: #a0522d;">keepEmpty</span> ) {
+  <span style="color: #228b22;">string</span> <span style="color: #a0522d;">token</span>, <span style="color: #a0522d;">theStr</span>(input);
+  <span style="color: #228b22;">int</span> <span style="color: #a0522d;">L</span> = delim.length();
+  <span style="color: #228b22;">vector</span>&lt;<span style="color: #228b22;">string</span>&gt; <span style="color: #a0522d;">result</span>(<span style="color: #a020f0;">new</span> <span style="color: #228b22;">vector</span>&lt;string&gt;());
+
+  <span style="color: #a020f0;">while</span> (token != theStr) {
+    <span style="color: #a020f0;">auto</span> <span style="color: #228b22;">end</span> = theStr.find_first_of(delim);
+    token = theStr.substr(0, end);
+    theStr = theStr.substr(end + L);
+    <span style="color: #a020f0;">if</span> (keepEmpty || token.length() &gt; 0) {
+      result.push_back(token);
+    }
+  }
+  <span style="color: #a020f0;">return</span> result;
+}
+</pre>
+</div>
+
+<script src="beamer-like.js"></script>
+</section>
+</section>
+</div>
+</div>
+
+<script src="./reveal.js/lib/js/head.min.js"></script>
+<script src="./reveal.js/js/reveal.min.js"></script>
+
+<script>
+// Full list of configuration options available here:
+// https://github.com/hakimel/reveal.js#configuration
+Reveal.initialize({
+
+controls: false,
+progress: true,
+history: false,
+center: true,
+slideNumber: true,
+rollingLinks: false,
+keyboard: true,
+overview: true,
+
+theme: Reveal.getQueryHash().theme, // available themes are in /css/theme
+transition: Reveal.getQueryHash().transition || 'none', // default/cube/page/concave/zoom/linear/fade/none
+transitionSpeed: 'default',
+
+// Optional libraries used to extend on reveal.js
+dependencies: [
+ { src: './reveal.js/lib/js/classList.js', condition: function() { return !document.body.classList; } },
+ { src: './reveal.js/plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+ { src: './reveal.js/plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+ { src: './reveal.js/plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+ { src: './reveal.js/plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+ { src: './reveal.js/plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }
+]
+});
+</script>
+</body>
+</html>

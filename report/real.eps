@@ -1,0 +1,60 @@
+%!PS-Adobe-3.0 EPSF-3.0
+%%BoundingBox: 0 0 324 160
+/Helvetica findfont
+20 scalefont
+0 setgray
+setfont
+
+/cL { %w x y
+ newpath
+ 0 setgray
+ moveto
+ 0 rlineto
+ 1 setlinewidth
+ stroke
+} def
+
+/conn {
+ newpath
+ moveto
+ lineto
+ 0 setgray
+ stroke
+ /Helvetica findfont
+ 12 scalefont
+ 1 0 0 setrgbcolor setfont
+ moveto
+ show
+}def
+
+/dY 16 def
+
+/exon{ % r, g, b, w, x, y
+ newpath
+ moveto % x, y
+ 0 dY rlineto
+ 0 rlineto % w
+ 0 dY neg rlineto
+ closepath
+ gsave
+ setrgbcolor fill
+ % r g b
+ grestore 
+ 0 setgray
+ stroke 
+} def
+
+40 10 moveto
+(12) show
+164 80 20 cL
+0.886 0.898 0.043 0.143739 11240.3 10 exon
+
+40 50 moveto
+(19) show
+92.8972 80 60 cL
+0.243 0.243 0 0.598912 38657 50 exon
+
+(2) 200 135 220 130 180 130 conn
+0.725 0.035 0.412 100 80 120 exon
+0.988 0.996 0.192 24 220 120 exon
+%%EOF

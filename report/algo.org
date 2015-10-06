@@ -1,0 +1,56 @@
+#+latex_header: \usepackage{droid}
+#+options: toc:nil
+
+* Create linear plot - BFS
+
+
+** Data Nodes
+
+- length
+- layer
+- chromosome
+- id
+
+** Adjacency array
+
+- $0$: not connected
+- $n$: link depth
+
+** Laying out
+
+- breadth-first
+
+#+BEGIN_SRC shell
+
+function count_nodes(root, n=0)
+  mark root as counted
+  root.id <- n
+  for neighbor in [root.successors, root.predecessors]
+  do
+    if neighbor not counted
+    then
+      n += count_nodes(neighbor, n)
+    fi
+  done
+  return n+1
+end
+
+function from_read(root)
+  N <- count_nodes(root)
+  m <- $N$x$N$ matrix of zeroes
+  q <- empty queue
+  q.push(root)
+  
+  while q not empty
+  do
+    el <- q.pop()
+    for s in el.successors
+    do
+      if not s.processed then q.push(el)
+      m[el.id, s.id] <- el.links[s]
+    done
+    mark el as processed
+  done
+end
+
+#+END_SRC

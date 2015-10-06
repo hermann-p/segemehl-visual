@@ -161,11 +161,11 @@ int main ( int argc, char** argv ) {
     for (auto& seed : *(g->multistrand)) {
       if (!(seed->flags & ReadContainer::PROCESSED)) {
 	cout << "MS seed: " << *seed << " flags: " << to_string(seed->flags) << endl;
-	LinearPlot plot;
- 	plot.fromRead(seed, g);
-	plot.writeEps(options.outFileName + "_multi_" + to_string(++N) + ".eps");
+	std::shared_ptr<LinearPlot> plot(new LinearPlot);
+ 	plot->fromRead(seed, g);
+	plot->writeEps(options.outFileName + "_multi_" + to_string(++N) + ".eps");
 	if (report) {
-	  plot.addToSummary(*report, options.fileName + "_multi_" + to_string(N) );
+	  plot->addToSummary(*report, options.fileName + "_multi_" + to_string(N) );
 	}
       }
     }

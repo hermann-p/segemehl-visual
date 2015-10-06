@@ -32,36 +32,46 @@ void LinearPlot::fromRead ( p_read_t seed, Genome* genome ) {
     auto& node = q.front();
     q.pop();
     
-#ifdef DEBUG
-    std::cout << "-- adding " << *node << "\t(" << std::to_string(flatGraph.size()) << ")" << std::endl;
-#endif
+// #ifdef DEBUG
+//     std::cout << "-- adding " << *node << "\t(" << std::to_string(flatGraph.size() + 1) << ")" << std::endl;
+// #endif
     
     if (node->flags & ReadContainer::PROCESSED) {
-      debug("---> skip");
+//      debug("---> skip");
       continue;
     } // guardian, matters in multiple-link scenarios
 
-    auto chromosome = addChromosome(genome, node->chromosome);
-    chromosome->addExon(node);
+//    debug("---- creating plot info");
+    auto chromosome = addChromosome(genome, node->chromosome); // add new or acquire existing plot chromosome
+    chromosome->addExon(node);                                 // add a visible section to plot chromosome
     node->flags |= ReadContainer::PROCESSED;
-    node->moreData = new PlotInfo;
-    node->moreData->id = flatGraph.size();
-    node->moreData->c2 = 0;
-    flatGraph.push_back(node);
-    if (node->threePrimeRead) {
+    if (flatGraph.size() <= 100) {
+      node->moreData = new PlotInfo;                             // add plotting coordinate data structure
+      node->moreData->id = flatGraph.size();
+      node->moreData->c2 = 0;
+      flatGraph.push_back(node);                                 // register with vector of nodes for later algorithms
+    }
+
+//    debug("---> looking for 3' links");
+    if (node->threePrimeRead) {                                // add unprocessed 3'-linked nodes
+      debug("------ " + std::to_string(node->threePrimeRead->size()) + " 3' links");
       for (auto& tpr : *node->threePrimeRead) {
 	if (!(tpr->flags & ReadContainer::PROCESSED)) {
 	  q.push(tpr);
 	}
       } // add all three prime linked nodes
-      for (auto& nReads : *node->threePrimeRefs) {
+      if (node->threePrimeRefs) for (auto& nReads : *node->threePrimeRefs) {// 3' links include read depth information
 	if (nReads < minLinks) minLinks = nReads;
 	if (nReads > maxLinks) maxLinks = nReads;
       } // find link dephts for filtering
     }
-    if (node->fivePrimeRead) for (auto& fpr : *node->fivePrimeRead) {
-      if (!(fpr->flags & ReadContainer::PROCESSED)) {
-	q.push(fpr);
+//    debug("---- looking for 5' links");
+    if (node->fivePrimeRead) {
+      debug("------ " + std::to_string(node->fivePrimeRead->size()) + " 5' links");
+      for (auto& fpr : *node->fivePrimeRead) { // add unprocessed 5'-linked nodes
+	if (!(fpr->flags & ReadContainer::PROCESSED)) {
+	  q.push(fpr);
+	}
       }
     } // add all five prime linked nodes
   }
@@ -96,17 +106,25 @@ void LinearPlot::assignLayers () {
     return (p_read_t)nullptr; // no node found
   };
 
+#ifdef DEBUG
+  uint N(0);
+#endif
   // longest path algorithm
-  while (U.size() < flatGraph.size()) {
+  while (U.size() < flatGraph.size()) {   // repeat until |assigned nodes| = |nodes|
     p_read_t v = select_next_node();
+#ifdef DEBUG
+    std::cout << "-- (" << std::to_string(++N) << ") node: ";
+    if (v == nullptr) std::cout << "none\n";
+    else std::cout << *v << std::endl;
+#endif
     if (v) { // element for this layer found
       layeredGraph[current].push_back(v); // map bracket-access creates new element if none found
       U.insert(v->moreData->id);          // add v to "assigned" set
       v->moreData->layer = current;
     }
     else { // no more elements for this layer
-      ++current;
-      Z.insert(U.begin(), U.end());       // add all "assigned" to "assigned and below current"
+      Z.insert(U.begin(), U.end());       // add all "assigned in this layer" to "assigned and below current"
+      ++current;                          // move to next layer
     }
   }
   debug("#### LinearPlot::assignLayers finished");
@@ -127,22 +145,32 @@ void LinearPlot::insertDummies () {
 	}
 	int layer2 = succ->moreData->layer;
 	int diff = layer2 - layer1;
+	if (diff > 1) { // no direct neighbours, need dummy padding
 #ifdef DEBUG
 	std::cout << *node << "@" << node->moreData->layer << " <--> " << *succ << "@" << succ->moreData->layer << " difference: " << diff << " layers\n";
 #endif
-	if (diff > 1) { // no direct neighbours, need dummy padding
 	  auto lt = node; // pointer to current dummy's predecessor
 	  for (int i(layer1 + 1); i <= layer2 - 1; ++i) { // all layers between nodes
+	    debug("-- Creating dummy");
 	    p_read_t dummy(new ReadContainer());
 	    dummy->flags |= ReadContainer::DUMMY;
-	    lg.at(i).push_back(dummy);
 	    dummy->moreData = new PlotInfo;
 	    dummy->moreData->id = flatGraph.size();
+	    dummy->moreData->layer = i;
+	    dummy->threePrimeRefs = new std::vector<depth_counter_t>;
+	    
+	    debug("-- pushing dummy to layered graph");
+	    lg.at(i).push_back(dummy);
+	    debug("-- pushing dummy to flat graph");
 	    flatGraph.push_back(dummy);
+	    debug("-- connecting exons");
 	    connectExons(lt, dummy);
 	    lt = dummy;
+	    debug("---- one dummy finished");
 	  }
+	  debug("-- reconnecting original successor");
 	  connectExons(lt, succ); // connect last dummy to the real successor
+	  debug("---- gap filled.");
 	} // padding detected
       } // successors of node
     } // nodes in layer
@@ -212,7 +240,7 @@ std::vector<std::vector<bool>> LinearPlot::transitiveReduction () {
     }
   }
 
-  
+
   #ifdef DEBUG
   std::cout << "after reduction:\n";
   for (auto line : d) {
@@ -245,7 +273,7 @@ void LinearPlot::barycenterCoords () {
       if (el->fivePrimeRead) {
 	uint count(1);
 	for (auto pre : *(el->fivePrimeRead)) { // all predecessors
-	  if (d[el->moreData->id][pre->moreData->id]) {
+	  if (d.at(el->moreData->id).at(pre->moreData->id)) {
 	    el->moreData->c2 += pre->moreData->c2;
 	    ++count;
 	  }
@@ -356,12 +384,16 @@ void LinearPlot::addToSummary ( std::ostream& out, std::string title ) {
   if (!assume(flatGraph.size() > 0, "## LinearPlot::addToSummary: Graph is empty, no summary will be written")) return;
   if (!assume(out.good(), "LinaerPlot::addToSummary: Could not write to output file")) return;
   out << title << "\t" << "an|";
+  
+  if (flatGraph.size() >= 100) {
+    out << "...(omitted suspicious graph)...|\t0\t0\n";
+  }
+  
   int n(flatGraph.size());                    // keep track of commas in output
   for (int i(n-1); i >= 0; --i) {              // traverse backwards because dummys are at the end
     auto& node = flatGraph.at(i);
     if (node->flags & ReadContainer::DUMMY) { // guardian: skip dummy nodes
       --n;                                    // skipped node => decrease commas
-      debug("Now printing no more than " + std::to_string(n-1) + " commas");
       continue;
     }
     out << "chr" << genome->getChrName(node->chromosome) << ":" << node->fivePrimeEnd << "-" << node->threePrimeEnd;
@@ -375,6 +407,10 @@ void LinearPlot::addToSummary ( std::ostream& out, std::string title ) {
 
 
 void LinearPlot::writeEps ( const std::string& fileName ) {
+  if (flatGraph.size() >= 100) {
+    return;
+  }
+  
   assignLayers();
   insertDummies();     // neccessary for correct placement
   barycenterCoords();

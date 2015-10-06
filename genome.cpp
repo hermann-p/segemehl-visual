@@ -1,3 +1,11 @@
+/* 
+ * Class that contains reassembled reads and their relation to the chromosomal
+ * positions of all individual fragments, as found by the segemehl matching tool.
+ * Assumption: all elements sharing a given 5'/3' position also share the
+ * 3'/5' position. This may 33be terribly wrong.
+ */
+
+
 #include "genome.h"
 #include "readcontainer.h"
 #include "utils.h"
@@ -90,7 +98,7 @@ p_read_t Genome::getReadAt ( const chr_num_t chr, const chr_pos_t pos ) const {
   if (lookup == chromosome->end()) {
     return nullptr;
   }
-  return (*lookup).second;
+  return lookup->second;
 }
 
 
@@ -205,20 +213,16 @@ bool Genome::parseHeaderLine ( const std::string& line ) {
 
 // extracs read data from a tokenized line to reassemble RNA
 bool Genome::parseDataLine ( std::vector<std::string>& tokens ) {
-//   auto tokens = strsplit(line, "\t");
     unsigned char flags  = 0;
     chr_num_t chr = getChrNum(tokens[RNAME]);
     chr_pos_t pos5 = atoi( tokens[POS].c_str() );
-    chr_pos_t pos3;
+//    chr_pos_t pos3;
     bool hasNext = false;
     chr_num_t nextChr = 0;
     chr_pos_t nextPos = 0;
     bool hasPrev = false;
     chr_num_t prevChr = 0;
     chr_pos_t prevPos = 0;
-/*    int start = 0;
-    int end = 0; */
-
     auto iter = tokens.begin();
     for (int i(0); i < QUAL; i++) iter++;             // skip default SAM tags
     for (;iter != tokens.end(); iter++) {             // iterate through custom tags
@@ -227,7 +231,7 @@ bool Genome::parseDataLine ( std::vector<std::string>& tokens ) {
 	  continue;
 	}  // guardian to filter non-segemehl tags starting with X
 	switch((*iter)[1]) {
-/*	You can't trust start and end information to be set correctly - segemehl error?
+/*	You can't trust start and end information to be set correctly, or, at all
  * 	case 'X': // start of current split
 	  start = atoi( (*iter).substr(5).c_str() );
 	  break;
@@ -260,12 +264,10 @@ bool Genome::parseDataLine ( std::vector<std::string>& tokens ) {
       }
     }
 
-//    if (start == end);
-    
-    pos3 = pos5 + calcLength(tokens[CIGAR]); // recalculate original position on chromosomes by undoing assumed indels 
+//    pos3 = pos5 + calcLength(tokens[CIGAR]); // recalculate original position on chromosomes by undoing assumed indels 
     p_read_t rc = getReadAt(chr, pos5);
-    if (rc == nullptr) {                     // no read found yet
-      rc = std::make_shared<ReadContainer>(chr, pos5, pos3-pos5);
+    if (rc == nullptr) {                     // the read os not yet contained in the genome
+      rc = std::make_shared<ReadContainer>(chr, pos5, calcLength(tokens[CIGAR]));
       registerRead(rc);
       rc->flags |= flags;
     }

@@ -23,6 +23,7 @@ struct PlotInfo {
 
 
 typedef std::shared_ptr<ReadContainer> p_read_t;
+typedef unsigned int depth_counter_t;
 
 
 class ReadContainer : public std::enable_shared_from_this<ReadContainer> {
@@ -38,7 +39,7 @@ public:
 
   link_list_t* threePrimeRead;
   link_list_t* fivePrimeRead;
-  std::vector<unsigned short>* threePrimeRefs;
+  std::vector<depth_counter_t>* threePrimeRefs;
   chr_num_t chromosome;
   chr_pos_t fivePrimeEnd;
   chr_pos_t threePrimeEnd;

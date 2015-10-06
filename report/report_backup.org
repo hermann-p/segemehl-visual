@@ -1,0 +1,405 @@
+#+Author: Hermann Pauly
+#+Title: A wrapper for visualisation of /segemehl/ output
+
+#+LATEX_CLASS: article
+
+#+LATEX_HEADER: %\usepackage{lmodern}
+#+LATEX_HEADER: \usepackage{algorithm2e}
+#+LATEX_HEADER: \usepackage{times}
+#+LATEX_HEADER: \usepackage[usenames,dvipsnames]{xcolor}
+#+LATEX_HEADER: \hypersetup{colorlinks=true, citecolor=Blue, linkcolor=Black, urlcolor=Blue}
+
+#+OPTIONS: toc:nil
+
+#+BEGIN_ABSTRACT
+The abstract is abstract
+Where has it gone?
+I mean... I really really did it.
+And I did it well!
+#+END_ABSTRACT
+
+
+
+* Tasks 							   :noexport:
+** Document tasks
+*** DONE create first outline
+*** DONE create final outline
+*** TODO wording of introduction
+*** DONE wording of methods
+*** DONE wording of results
+*** DONE wording of discussion
+*** DONE figure out citations
+** Programming tasks
+*** TODO follow roadmap
+
+
+* Introduction
+
+
+** Splicing and isoforms
+
+Alternate splicing is a cellular process that massively increases the amount of different RNA
+and proteins available to organism without the need to store more genetic information. Next to
+gene silencing and methylation it is another mechanism that allows cells to differentiate.
+On the other hand, erroneous splicing events can cause various diseases.
+
+
+
+
+** Detection algorithms
+- segemehl
+  
+
+* The program
+
+My goal was to create software that is able to create visualisation plots for RNA mappings 
+created with /segemehl/ in an automated way.
+It should be able to visualise "standard" RNAs, with exons originating from a defined area on a 
+specific chromosome as well as novell kinds of transcripts detected with the /segemehl/ method. 
+As NGS methods produce large data files, it had to be fast and needed to store the results 
+efficiently in RAM while running. 
+Due to the large numbers of RNA transcripts that are typically processed in NGS machines,
+user-defined filtering needs to be implemented.
+I chose the following filtering options:
+detection of all *multistrand* RNAs, that is transcripts which contain fragments that were mapped
+to different chromosomes, 
+detection of all circular RNAs,
+and all isoforms containing user-defined chromosome and position pairs.
+Future versions also aim to further refine the search by allowing to filter by *link depth*, that
+is the number of times a connection of any two splits within transcripts and isoforms occured in 
+the input files.
+The software should abstract the temporary representation, input and output backends, so future 
+versions can be extended to work with other mapping tools' output files and customise resulting 
+file formats and visual appearance.
+
+
+** Overview and used third-party software
+
+The visualisation program with the working title /chipboard/ is written in /C++/ for a balance
+of speed and memory efficiency on the one hand, and safe and readable code on the other hand.
+I automated compiling by using the /cmake/ build managing system(\cite{cmake}). For GUI creation,
+I used /Qt4.8/ (\cite{qtpage}).
+
+For development I used the /gcc/ compiler suite version 4.8.2 and /cmake/ version 3.1.0.
+
+
+** Plot types
+
+*** Isoform tree plots
+\label{txt:tree1}
+
+In an effort to increase the information content and readability within plotted RNAs with
+multiple isoforms, I decided to visualise RNA not as a linear strand with connection lines (see
+fig. \ref{fig:linearrna}), but as a tree structure. Split reads are nodes, with their basepair
+lengt reflected in the node length, while splicing events are edges, allowing a more
+intuitive understanding of existing isoforms.
+
+
+#+BEGIN_LATEX
+\begin{figure}
+ \centering
+ \includegraphics[width=0.8\textwidth]{rnas}
+ \caption[Tree-like RNA visualisation]{The same information displayed \textbf{(a)} in a traditional linear presentation and \textbf{(b)} in a treemap mockup (note that the reverse strand is presented in another colour, as it will be detected differently by \textit{segemehl}}\label{fig:linearrna}
+\end{figure}
+#+END_LATEX
+
+
+*** Circular plots
+\label{txt:circ1}
+
+Circular RNA will be visualised as ring structures. The size and angle of ring fragments for each
+split indicate its relative length, compared to the whole ring.
+
+
+** Reassembly of /segemehl/ split reads 
+\label{txt:reassembly}
+
+/Segemehl/ with its /split/ option enabled divides input RNA reads into fragments, maps each 
+of those *split* fragments to the chromosomes and position it fits best and stores them, 
+line-wise and in order, inside the /sam/ file, together with information how it had
+performed the splitting and mapping.
+It thus provides a guideline how to reassemble the input reads. 
+With each split the following information is stored: 
+(1) the chromosome, read position, and read direction ("strandiness") it was mapped to,
+(2) information about mapping length and quality,
+(3) a number specifying the order of splits along the original read,
+(4) information about chromosome, position and strandiness of the previous and next split in
+this read, if there are any.
+
+For reassembly I treat reads as doubly $n/m$-linked graphs, where exons resemble nodes and 
+splicings resemble edges.
+Each node stores the length in base pairs and the chromosome of origin of the split it 
+represents, as well as edges resembling detected 3' and 5' splice events.
+The chromosomes are represented as ordered maps, which map 3' and 5' positions to the respective
+nodes (compare fig. \ref{fig-datastructure}).
+
+
+#+CAPTION: /chipboard/'s internal datastructure
+#+LABEL: fig-datastructure
+#+ATTR_LATEX: :float wrap
+[[./datatype.png]]
+
+
+*** Reassembling the original RNA sequences
+
+I assumed that every split of input RNA sequence would resemble an exon and did not test for
+meaningfulness of splice sites. I used the information I had extracted (see \ref{txt:reassembly})
+to reassemble the original inputs by a series of simple steps on every line of /.sam/ data:
+First the program determines the chromosome positions the 5' and 3' ends map to. As
+/segemehl/ does neither fill in the "match length" property nor the match position of the 5' end,
+the program reconstructs them from the /cigar/ string, which encodes assumed matches, mismatches,
+insertions and deletions in the mapping process (see \cite{samFormat}). 
+Next, the program compares the resulting chromosome positions with existing nodes' data and 
+creates a new node if no matching one exists.
+Then the program looks, if the current split's 3' and 5' ends are linked to other splits. If
+there are any linked splits, a check for existing modes is done. Existing nodes are doubly-linked
+immediately. If a split's upstream predecessor is linked, the predecessor's link depth counter
+to the current split is increased. As /segemehl/ writes all encountered fragments in order, this
+is assured to find correct link depths. If the /.sam/ file has been sorted or modified after 
+the /segemehl/ processing, link depths may not be counted correctly, but due to the usage
+of doubly linked nodes, all isoforms from the original input file will be reconstructed.
+Assuring correct link depths in randomly ordered input files is possible if the input file is
+processed twice, but was considered impractical standard behaviour, as it would double the 
+relatively long runtime.
+
+
+*** Detecting multistrand reads
+
+One of the key features of /segemehl/ is the mapping of read fragments to different chromosomal
+strands of origin. To detect such multistrand chromosomes on user request, the information from
+\ref{txt:reassembly} is applied straightforward: if a split's successor is on a different
+chromosome, the respective split is added to a list of multistrand *seeds*, which can be expanded
+to a full isoform tree (see \ref{txt:tree1}) for plotting on the available backends.
+
+
+*** Detecting circular reads
+
+Another feature of /segemehl/ is the detection of circular RNAs.
+The split segments of a linear RNA read follow each other in a definite order in the resulting
+/.sam/ file. This can be seen in both an ascending ordering number and an ascending position on
+the chromosome (or descending if case of reverse strandiness). A circular transcript can
+be identified by an ascending order number combined with a position which lies before the
+chromosome position of a split with lower read number (with respect to the reading direction).
+A split with these properties gets added to a list of circular seeds, to be expanded to full
+circular graphs (see \ref{txt:circ1}) if the user requests circular detection.
+
+
+** Plotting
+\label{txt:bfs}
+
+In \ref{txt:tree1} and \ref{txt:circ1} I indicated, that only single splits of subgraphs
+interesting to the user get saved to a list for later expansion to full (sub-)graphs.
+There were two reasons for the decision to save graph seeds instead of full graphs:
+(1) memory consumption was a huge concern during development, and
+(2) as there is no way to find out, when all copies and isoforms of a read have been processed,
+a full copy of each graph would have to be updated every time another read adds to it.
+Thus only one node of the interesting graph is saved and expanded with a breadth-first traversal
+of its linking edges, as seen in algorithm \ref{alg:bfs}.
+Note that this approach evaluates the full subgraph of nodes connected to the seed, which may
+also contain nodes that share no primary connection to it, e. g. are an isoform of an exon that
+exists only in some isoforms of the queried graph, but never occur in combination with the query
+seed.
+There is no immediate drawing done, the method generates coordinates which can then be handled
+or modified by the drawing backend.
+
+The drawing backend encodes basepair length in the size of the resulting fragments, chromosome
+association in colours, and displays link depth numerical.
+
+#+BEGIN_LATEX
+\begin{algorithm}  \label{alg:bfs}
+  \DontPrintSemicolon
+  \KwIn{$node$: one node of a graph}
+  \KwOut{The whole graph which is connected to $node$}
+  $q$ $\leftarrow$ empty queue\;
+  push $node$ to $q$\;
+  \While{$q$ not empty}{
+    $N$ $\leftarrow$ pop first element from $q$\;
+    mark $N$ as visited\;
+    create a visualisation node for $N$\;
+    \lForAll{unvisited 5' links $el5$ in $N$}{
+      push $el5$ to $q
+    }
+    \ForAll{3' links $el3$ in $N$}{
+      create a visualisation edge $N \to el3$ with link depth label\;
+      \lIf{$el3$ unvisited}{
+        push $el3$ to $q$
+      }
+    }
+  }
+  \caption[BFS graph seed traversal]{Breadth first traversal (BFS) to expand a complete graph from a single member node}
+\end{algorithm}
+#+END_LATEX
+
+*** Isoform trees
+\label{txt:tree2}
+
+The tree visualisation is generated from the coordinates generated by algorithm \ref{alg:bfs}.
+Starting from the first node without links on the 3' end drawn at the leftmost x position, 
+the nodes are drawn. Depending on the number of nodes linked to a node's 5' end, those 5'-linked
+nodes get drawn recursively with an offset in y-position (compare algorithm \ref{alg:tree}).
+
+
+#+BEGIN_LATEX
+\begin{algorithm}
+\label{alg:tree}
+\DontPrintSemicolon
+\KwIn{$node$, x-coordinate $x$, y-coordinate $y$}
+\KwResult{Draw tree graph representation}
+\BlankLine
+\emph{Start with $node =$ node without predecessors, $x=0, y=0$}
+\BlankLine
+
+\SetKwProg{Fn}{function}{:}{end}
+\Fn{naiveLayout($node, x, y)}{
+  draw $node$ at position ($x, y$) \;
+  $nextX \leftarrow x + 1$ \;
+  $y0 \leftarrow -$(number of 5' links $ / \; 2)$\;
+  \For{$i \leftarrow 0$ \KwTo number of 5' links}{
+    $nextY \leftarrow y0 + i$ \;
+    $nextNode \leftarrow$ 5'links[i]\;
+    draw edge to $(x+1, nextY)$ \;
+    naiveLayout(nextNode, nextX, nextY)
+  }
+}
+\caption[Naive tree layout]{Naive tree layout. More complex graphs may create colliding coordinates for nodes}
+\end{algorithm}
+#+END_LATEX
+
+
+*** Circular reads
+\label{txt:circ2}
+
+The basepair length of each split is compared to the basepair length of the complete circular RNA
+to determine which fraction of the ring will be assigned to it.
+This method does not treat the special case of a circular graph with isoforms properly. A first
+step to resolve this could be applying Djikstra's Algorithm (see e. g. \cite{cormen1999}) to find
+the shortest path from the starting node to the end node before closing the circle and 
+evaluating the graph.
+
+
+
+** Image export
+
+At the moment, only the export of programmatically generated Adobe Encapsulated PostScript (/.eps/)
+is supported. However, the reconstructed and filtered graphs can be exportet to /GraphML/ format
+for visualisation with 3rd party software.
+
+
+* Results
+
+
+** Test cases
+\label{txt:test}
+
+To create test cases, I used a custom /python/ script which simulates chromosome data through
+randomly drawing from the nucleid base letters $[A,C,G,T]$ and writing them into a /.fasta/ file.
+From these simulated chromosomes, I copy-pasted segments into another /.fasta/ file to simulate
+sequencer reads. Then I used /segemehl/ to remap the simulated reads to the simulated chromosomes.
+This allowed me to know the desired results and quickly spot errors during development.
+
+When I allowed /segemehl/ to split input reads and map the fragments to different chromosomes 
+(multistrand reads), it found the origins of all fragments correctly. However, when read length
+exceeded 120 bases, /segemehl/ often crashed with memory access errors.
+
+Visualisation of output files with /chipboard/ worked well with multistrand RNAs that have only 
+a small number of isoforms (see fig. \ref{fig-tree}).
+More complicated transcripts will result in skewed output, however, as nodes farther down in the
+tree may have multiple 5'links themselves, thus changing their respective y coordinate offset in
+ways that collide with sibling nodes' positions.
+
+#+CAPTION: Tree plot
+#+LABEL: fig-tree
+#+ATTR_LATEX: :float wrap
+#+ATTR_LATEX: :caption \caption[Multistrand treeplot]{Treeplot of a RNA that contains a multistrand and a non-numltistrand isoform generated from test data.}\label{fig-tree}
+[[./tree.png]]
+
+
+** Real world data
+\label{txt:data}
+
+To test /chipboard/ on real world data, I successfully ran it on 41 - 69GB files from 
+\cite{skinpaper}, where it detected millions of multistrand RNAs per file. Sampling of generated
+output files showed that detected strand-switching events tend to be short (2-3 exons) and have a
+low link depth (never above 4 in 20 randomly picked output images). Full evaluation of all found
+events was not done.
+
+The available data has been pre-filtered for poly-A reads, so circular transcripts are not 
+contained, as poly-A tails are signalling structures of linear RNA.
+Hence the search for circular transcripts was not enforced.
+
+
+** Performance 
+
+Running on datasets of different size, /chipboard/ showed linear ($O(n)$) runtime.
+On the /rhskl5/ workstation of Universität Regensburg, about 20GB of data could be processed per
+hour without optimisation flag; setting the optimisation to level 2 (\texttt{-O2}) increased the
+performance to 32 GB/h (see fig \ref{fig:times}).
+Profiling showed, that 50% of the runtime is spent tokenizing text strings from the
+human-readable /.sam/ input files to parse them for data.
+
+#+CAPTION: Runtime comparison org
+#+LABEL: fig:times
+#+ATTR_LATEX: :caption \caption[Runtime comparison]{Runtime comparison on \textit{rhskl5} workstation. Runtime increases in linear fashion with data size, while optimised code runs 1/3 faster. Times were taken for 57 MiB, 41 GiB and 69 GiB files.}\label{fig:times}
+#+ATTR_LATEX: :width 0.5\textwidth :float wrap
+[[./times.png]]
+
+
+* Discussion
+
+The software /chipboard/ is a tool to visualise NGS sequencing data which has been mapped with
+the /segemehl/ tool. It allows to scan for RNA assembled of exons from different strands of RNA and is
+at the time of writing the only software known to me that automates the visualisation of such 
+events.
+In addition, it allows the user to select RNA which contains exons from specific chromosome
+positions. With tree-like isoform graphs, it tries to increase visual information content in 
+comparison with more common visualisation approaches.
+
+In its current state, /chipboard/ is stable but not complete. Detection and visualisation of
+circular graphs has been deactivated in the current build, as it is only rudimetary and not
+yet thoroughly tested. Also, as hinted in \ref{txt:circ2}, circular RNAs with splice variants can be
+ambiguous. When traversing the graph, the program could get stuck in a non-circular isoform. To
+avoid this, some shortest path search like Djikstra's algorithm must be applied to find a
+complete path from the start-node to the end node.
+
+The visualisation of tree graphs only works for simple graphs with a low number of isoforms.
+RNAs with many complex isoforms will create graphs with overlapping node coordinates. To adress
+this, a full-fledged graph layout algorithm must be used. I suggest to refrain from force-based
+methods in favour of hiearachy-based methods like Sugiyama's method.
+Although force-based approaches create graphs which are tendentially more aesthetically
+pleasing, their runtime tends to be far slower (see \cite{hbgraphs}).
+
+Although the runtime of 1h per 32GB seems quite moderate, some optimisation is still desirable.
+When parsing the /.sam/ input files, it is impossible to predict, which split will be read next,
+and what graph it may belong to. This makes parallellization very hard. Mutexes could be used
+to lock all nodes of a graph for a single process, but this would include traversing up to two
+complete graphs for every split that is added, plus the time needed to wait for other processes
+releasing locks, so no critical speed gain should be expected from this.
+However, when running the program, about 50% of the runtime is used tokenizing string data. This
+is done serially, so a dual-thread approach could be used, where one thread tokenizes strings and
+pushes them to a thread-safe dequeue buffer, while a second thread pops the tokenized strings and
+constructs the graphs from them. This way, it should be possible to process the same data in half
+the time.
+
+To improve the usefulness of /chipboard/, visualisation should be extended in various ways.
+Unused regions of the chromosomes, against which splits are mapped, should be shortened in the
+graphical output. Chromosome position numbers  should be displayed, and the splits in the output
+graphs should display identifiers to allow connecting them to their respective exon regions.
+Also a method to list all findings of interest in a text file for further processing would prove
+a usefull addition and should be trivial to implement.
+
+The analysis of real world data (\ref{txt:data}) showed numerous findings of strand-switching
+events in RNA synthesis, but due to the short length and low link depth found in subsamples the
+reliability of those findings must be doubted. The samples seem to imply sequencer artifactcs 
+rather than real discoveries, but to make any reliable statements, proper statistical analysis 
+has to be done on all the findings. The subsampling of 20 singular events out of 2 million 
+possible findings  is far from being representative.
+
+A development snapshot of the program's source code can be accessed on [[http://www.github.com/hermann-p/segemehl-visual][my github page]].
+
+
+\listoffigures
+
+\listofalgorithms
+
+\bibliography{references}
+\bibliographystyle{plain}
